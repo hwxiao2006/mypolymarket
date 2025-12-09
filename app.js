@@ -194,7 +194,18 @@ async function loadMoreTrades() {
 }
 
 async function getTrades(address, offset) {
-    const url = `${API_BASE}/trades?user=${address}&limit=${LIMIT}&offset=${offset}`;
+    // 构建基础URL
+    let url = `${API_BASE}/trades?user=${address}&limit=${LIMIT}&offset=${offset}`;
+    
+    // 如果有日期范围，使用/activity端点并添加时间参数
+    if (dpState.startDate && dpState.endDate) {
+        const startTime = Math.floor(dpState.startDate.getTime() / 1000);
+        const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86400; // 加一天以包含结束日期的所有交易
+        
+        // 使用/activity端点，它支持start和end参数
+        url = `${API_BASE}/activity?user=${address}&limit=${LIMIT}&offset=${offset}&start=${startTime}&end=${endTime}&type=TRADE`;
+    }
+    
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -209,6 +220,11 @@ function renderTrades(trades, append) {
     
     if (!append) {
         container.innerHTML = '';
+    }
+    
+    // 检查是否是来自/activity端点的数据，如果是，则过滤出TRADE类型
+    if (trades.length > 0 && trades[0].type) {
+        trades = trades.filter(t => t.type === 'TRADE');
     }
     
     if (trades.length === 0 && !append) {
@@ -227,9 +243,9 @@ function createTradeElement(trade) {
     div.className = 'trade-row';
     
     // --- Activity Logic ---
-    // The API returns 'side' as BUY or SELL. 
-    // We map this to 'Bought' / 'Sold'.
-    // Note: 'Claimed' is not in standard trades endpoint usually, but we'll stick to what we have.
+    // 处理来自不同端点的数据结构
+    // /trades 端点使用 side 字段
+    // /activity 端点使用 side 字段，但包装在不同的结构中
     const isBuy = trade.side === 'BUY';
     const activityLabel = isBuy ? 'Bought' : 'Sold';
     
@@ -250,6 +266,7 @@ function createTradeElement(trade) {
     }
 
     // --- Market Logic ---
+    // 处理来自不同端点的数据结构
     const marketTitle = trade.title || 'Unknown Market';
     const marketUrl = trade.eventSlug 
         ? `https://polymarket.com/event/${trade.eventSlug}` 
@@ -262,15 +279,17 @@ function createTradeElement(trade) {
     const outcomeClass = outcomeText.toLowerCase() === 'yes' ? 'badge-yes' : 'badge-no';
     
     // Shares & Price
-    const shares = trade.size?.toFixed(1) || '0.0';
-    const priceCents = (trade.price * 100).toFixed(0);
+    // 处理来自不同端点的数据结构
+    const shares = (trade.size || trade.usdcSize || 0).toFixed(1);
+    const price = trade.price || 0;
+    const priceCents = (price * 100).toFixed(0);
 
     // --- Value Logic ---
     // Value = Price * Size. 
     // If Bought, usually negative cash flow in activity view? 
     // Checking screenshot: "Bought ... -$1.14". "Claimed ... +$10.00".
     // So Bought is negative, Sold is positive.
-    const rawValue = trade.size * trade.price;
+    const rawValue = (trade.size || trade.usdcSize || 0) * price;
     const valueSign = isBuy ? '-' : '+';
     const valueClass = isBuy ? 'val-neg' : 'val-pos'; // Bought is cost (black/red), Sold is income (green)
     const formattedValue = `${valueSign}$${rawValue.toFixed(2)}`;
