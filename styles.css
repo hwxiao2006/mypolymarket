@@ -103,6 +103,45 @@ body {
     color: var(--text-primary);
 }
 
+/* Tabs Navigation */
+.tabs-nav {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-tab {
+    background: none;
+    border: none;
+    padding: 12px 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.nav-tab:hover {
+    color: var(--text-primary);
+}
+
+.nav-tab.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.nav-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--text-primary);
+}
+
 /* Table Header */
 .table-header {
     display: grid;
@@ -120,10 +159,9 @@ body {
     text-transform: uppercase;
 }
 
-.col-value {
-    /* Value column acts as header for both value and time in the row, 
-       but strictly speaking the time is visually separate. 
-       We'll align header to left of the value area. */
+.positions-header {
+    grid-template-columns: minmax(300px, 2fr) 140px 100px 100px 120px 100px;
+    gap: 16px;
 }
 
 /* List Items */
@@ -144,6 +182,21 @@ body {
 .trade-row:hover {
     background-color: var(--hover-bg);
 }
+
+.position-row {
+    display: grid;
+    grid-template-columns: minmax(300px, 2fr) 140px 100px 100px 120px 100px;
+    gap: 16px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+    transition: background-color 0.15s;
+}
+
+.position-row:hover {
+    background-color: var(--hover-bg);
+}
+
 
 /* Column: Activity */
 .cell-activity {
@@ -262,7 +315,7 @@ body {
 }
 
 .val-neg {
-    color: var(--text-primary); /* Polymarket shows negative as black/default often, or red */
+    color: var(--text-primary);
 }
 
 .time-ago {
@@ -315,33 +368,83 @@ body {
     background: var(--hover-bg);
 }
 
-@media (max-width: 768px) {
-    .table-header {
-        display: none;
-    }
-    
-    .trade-row {
-        grid-template-columns: 1fr;
-        gap: 12px;
-        position: relative;
-    }
+/* Position Specifics */
+.price-change-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
 
-    .cell-value {
-        justify-content: flex-start;
-        gap: 12px;
-    }
+.price-arrow {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
 
-    .time-ago {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-    }
+.money-cell {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.value-cell-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.pnl-text {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.pnl-pos { color: var(--text-green); }
+.pnl-neg { color: var(--text-red); }
+
+.pos-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-sell {
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-sell:hover {
+    background-color: #1d4ed8;
+}
+
+.btn-share {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.btn-share:hover {
+    background-color: var(--hover-bg);
+    color: var(--text-primary);
 }
 
 /* Date Picker Modal */
 .date-picker-modal {
     position: absolute;
-    top: 140px; /* Adjust based on where button is */
+    top: 140px;
     left: 50%;
     transform: translateX(-50%);
     background: white;
@@ -351,7 +454,7 @@ body {
     z-index: 1000;
     width: 600px;
     font-family: var(--font-family);
-    display: none; /* Hidden by default */
+    display: none;
 }
 
 .dp-container {
@@ -460,7 +563,7 @@ body {
 }
 
 .dp-day.selected {
-    background-color: #2563eb; /* Blue */
+    background-color: #2563eb;
     color: white;
     border-radius: 6px;
 }
@@ -541,6 +644,25 @@ body {
     background-color: #1d4ed8;
 }
 
+@media (max-width: 1000px) {
+    .table-header, .positions-header { display: none; }
+    .trade-row, .position-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        position: relative;
+    }
+    
+    .cell-value, .price-change-cell, .money-cell, .pos-actions {
+        justify-content: flex-start;
+        gap: 12px;
+    }
+
+    .time-ago, .pos-actions {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+    }
+}
 @media (max-width: 600px) {
     .date-picker-modal {
         width: 90%;

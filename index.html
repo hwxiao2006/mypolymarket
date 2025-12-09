@@ -11,6 +11,24 @@
     <div class="main-container">
         <!-- Top Control Bar -->
         <div class="controls-bar">
+            <!-- Search is now global or per tab? Screenshot shows search under tabs usually, but user screenshot shows search bar. 
+                 The screenshot provided for "Positions" has tabs AT THE TOP, then search bar. 
+                 My current layout has search bar at top. I will keep search bar at top for now or move it? 
+                 The screenshot shows: Tabs (Positions, Open orders, History) -> Search Bar -> Filter Bar (for history?) -> Table.
+                 Wait, the screenshot for Positions shows: Tabs -> Search Bar -> Table.
+                 The screenshot for Activity (History) shows: Search Bar -> Filters -> Table.
+                 
+                 Let's place Tabs ABOVE the Search Bar.
+            -->
+        </div>
+        
+        <div class="tabs-nav">
+            <button class="nav-tab active" data-tab="positions">Positions</button>
+            <button class="nav-tab" data-tab="openOrders">Open orders</button>
+            <button class="nav-tab" data-tab="history">History</button>
+        </div>
+
+        <div class="controls-bar">
             <div class="search-wrapper">
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"></circle>
@@ -24,7 +42,8 @@
                 >
             </div>
             
-            <div class="actions-group">
+            <!-- Filters for History (Hidden in Positions view) -->
+            <div class="actions-group" id="historyFilters" style="display: none;">
                 <button class="btn-filter">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
                     All
@@ -35,7 +54,7 @@
                 </button>
                 <button class="btn-filter date-range">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    2025/12/9 - 2025/12/9
+                    Date Range
                 </button>
                 <button class="btn-filter">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -46,13 +65,14 @@
                     Close Losses
                 </button>
             </div>
-        </div>
-
-        <!-- Table Header -->
-        <div class="table-header">
-            <div class="col-activity">ACTIVITY</div>
-            <div class="col-market">MARKET</div>
-            <div class="col-value">VALUE</div>
+            
+            <!-- Filters for Positions (Current value button) -->
+            <div class="actions-group" id="positionsFilters">
+                <button class="btn-filter">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+                    Current value
+                </button>
+            </div>
         </div>
 
         <!-- Content Area -->
@@ -62,15 +82,41 @@
 
         <div id="error" class="error-state" style="display: none;"></div>
 
-        <div id="tradesContainer" class="trades-list">
-            <div class="empty-state">
-                Enter wallet address to view history
+        <!-- POSITIONS VIEW -->
+        <div id="positionsView">
+            <div class="table-header positions-header">
+                <div class="col-pos-market">MARKET</div>
+                <div class="col-pos-prices">AVG <span class="arrow">→</span> NOW <span class="info-icon">ⓘ</span></div>
+                <div class="col-pos-bet">BET</div>
+                <div class="col-pos-towin">TO WIN</div>
+                <div class="col-pos-value">VALUE <span class="arrow">∨</span></div>
+            </div>
+            <div id="positionsContainer" class="trades-list">
+                <div class="empty-state">
+                    Enter wallet address to view positions
+                </div>
             </div>
         </div>
 
-        <div id="loadMore" class="load-more-container" style="display: none;">
-            <button class="btn-load-more" onclick="loadMoreTrades()">Load More</button>
+        <!-- HISTORY VIEW (Hidden initially) -->
+        <div id="historyView" style="display: none;">
+            <div class="table-header history-header">
+                <div class="col-activity">ACTIVITY</div>
+                <div class="col-market">MARKET</div>
+                <div class="col-value">VALUE</div>
+            </div>
+
+            <div id="tradesContainer" class="trades-list">
+                <div class="empty-state">
+                    Enter wallet address to view history
+                </div>
+            </div>
+
+            <div id="loadMore" class="load-more-container" style="display: none;">
+                <button class="btn-load-more" onclick="loadMoreTrades()">Load More</button>
+            </div>
         </div>
+
     </div>
 
     <!-- Date Picker Modal -->

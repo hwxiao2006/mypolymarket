@@ -2,8 +2,9 @@ const API_BASE = 'https://data-api.polymarket.com';
 let currentOffset = 0;
 let currentAddress = '';
 const LIMIT = 20;
+let activeTab = 'positions'; // Default tab
 
-async function fetchTrades() {
+async function handleSearch() {
     const addressInput = document.getElementById('walletAddress');
     const address = addressInput.value.trim();
     
@@ -18,21 +19,129 @@ async function fetchTrades() {
     }
     
     currentAddress = address;
-    currentOffset = 0;
-    
-    showLoading(true);
     hideError();
+    showLoading(true);
+
+    try {
+        if (activeTab === 'positions') {
+            await fetchPositions(address);
+        } else if (activeTab === 'history') {
+            currentOffset = 0;
+            await fetchTrades(address);
+        } else {
+            // Open orders
+            showLoading(false);
+        }
+    } catch (error) {
+        showError('Failed to fetch data: ' + error.message);
+        showLoading(false);
+    }
+}
+
+async function fetchPositions(address) {
+    // Note: Endpoint might be different, trying common pattern
+    const url = `${API_BASE}/positions?user=${address}`; 
+    const response = await fetch(url);
     
+    if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+    }
+    
+    const positions = await response.json();
+    renderPositions(positions);
+    showLoading(false);
+}
+
+function renderPositions(positions) {
+    const container = document.getElementById('positionsContainer');
+    container.innerHTML = '';
+    
+    if (!positions || positions.length === 0) {
+        container.innerHTML = '<div class="empty-state">No active positions found</div>';
+        return;
+    }
+    
+    positions.forEach(pos => {
+        const el = createPositionElement(pos);
+        container.appendChild(el);
+    });
+}
+
+function createPositionElement(pos) {
+    const div = document.createElement('div');
+    div.className = 'position-row';
+    
+    // Data extraction (guessing fields based on typical API)
+    // Adjust fields if API response differs
+    const title = pos.title || pos.market?.question || 'Unknown Market';
+    const outcome = pos.outcome || 'Yes'; // or 'No'
+    const outcomeClass = outcome.toLowerCase() === 'yes' ? 'badge-yes' : 'badge-no';
+    const size = parseFloat(pos.size || 0);
+    const avgPrice = parseFloat(pos.avgPrice || pos.buyPrice || 0); // Avg entry
+    const currentPrice = parseFloat(pos.currentPrice || pos.price || avgPrice); // Current market price
+    
+    const bet = size * avgPrice;
+    const value = size * currentPrice;
+    const toWin = size; // If price goes to $1, value is size * $1 = size
+    
+    const pnl = value - bet;
+    const pnlPercent = bet > 0 ? (pnl / bet) * 100 : 0;
+    const pnlClass = pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+    const pnlSign = pnl >= 0 ? '+' : '-';
+    
+    const iconSrc = pos.icon || pos.image || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="%23f3f4f6" width="40" height="40"/></svg>';
+    const marketUrl = pos.slug ? `https://polymarket.com/event/${pos.slug}` : '#';
+
+    div.innerHTML = `
+        <div class="cell-market">
+            <img class="market-icon" src="${escapeHtml(iconSrc)}" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><rect fill=%22%23f3f4f6%22 width=%2240%22 height=%2240%22/></svg>'">
+            <div class="market-content">
+                <a href="${escapeHtml(marketUrl)}" class="market-title" target="_blank">${escapeHtml(title)}</a>
+                <div class="market-sub">
+                    <span class="outcome-badge ${outcomeClass}">${escapeHtml(outcome)} ${Math.round(currentPrice * 100)}¢</span>
+                    <span>${size.toFixed(1)} shares</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="price-change-cell">
+            <span>${Math.round(avgPrice * 100)}¢</span>
+            <span class="price-arrow">→</span>
+            <span>${Math.round(currentPrice * 100)}¢</span>
+        </div>
+        
+        <div class="money-cell">$${bet.toFixed(2)}</div>
+        
+        <div class="money-cell">$${toWin.toFixed(2)}</div>
+        
+        <div class="value-cell-group">
+            <div class="money-cell">$${value.toFixed(2)}</div>
+            <div class="pnl-text ${pnlClass}">${pnlSign}$${Math.abs(pnl).toFixed(2)} (${Math.abs(pnlPercent).toFixed(2)}%)</div>
+        </div>
+        
+        <div class="pos-actions">
+            <button class="btn-sell">Sell</button>
+            <button class="btn-share">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+            </button>
+        </div>
+    `;
+    return div;
+}
+
+// Renamed from fetchTrades to be specific, but keeping old function for History tab
+async function fetchTrades(address) {
+    // ... existing logic ...
+    currentOffset = 0;
+    showLoading(true);
     try {
         let trades = await getTrades(address, 0);
-        
-        // Client-side date filtering
+         // Client-side date filtering
         if (dpState.startDate && dpState.endDate) {
             const startTs = dpState.startDate.getTime() / 1000;
-            const endTs = dpState.endDate.getTime() / 1000 + 86400; // End of day
+            const endTs = dpState.endDate.getTime() / 1000 + 86400; 
             trades = trades.filter(t => t.timestamp >= startTs && t.timestamp < endTs);
         }
-        
         renderTrades(trades, false);
         document.getElementById('loadMore').style.display = trades.length >= LIMIT ? 'block' : 'none';
     } catch (error) {
@@ -41,6 +150,10 @@ async function fetchTrades() {
         showLoading(false);
     }
 }
+
+// ... existing loadMoreTrades, getTrades, renderTrades, createTradeElement ...
+// I need to update the Search event listener to call handleSearch
+
 
 async function loadMoreTrades() {
     currentOffset += LIMIT;
@@ -209,7 +322,10 @@ function escapeHtml(text) {
 
 function showLoading(show) {
     document.getElementById('loading').style.display = show ? 'block' : 'none';
-    const searchBtn = document.getElementById('searchBtn'); // Search is now implicit via enter, but input exists
+    const searchBtn = document.getElementById('searchBtn');
+    if (searchBtn) searchBtn.disabled = show;
+    const walletInput = document.getElementById('walletAddress');
+    if (walletInput) walletInput.disabled = show;
 }
 
 function showError(message) {
@@ -226,8 +342,37 @@ function hideError() {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('walletAddress').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            fetchTrades();
+            handleSearch();
         }
+    });
+    
+    // Tab Switching
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            activeTab = tab.dataset.tab;
+            
+            // UI Switching
+            if (activeTab === 'positions') {
+                document.getElementById('positionsView').style.display = 'block';
+                document.getElementById('historyView').style.display = 'none';
+                document.getElementById('positionsFilters').style.display = 'flex';
+                document.getElementById('historyFilters').style.display = 'none';
+                if(currentAddress) handleSearch();
+            } else if (activeTab === 'history') {
+                document.getElementById('positionsView').style.display = 'none';
+                document.getElementById('historyView').style.display = 'block';
+                document.getElementById('positionsFilters').style.display = 'none';
+                document.getElementById('historyFilters').style.display = 'flex';
+                if(currentAddress) handleSearch();
+            } else {
+                // Open Orders
+                document.getElementById('positionsView').style.display = 'none';
+                document.getElementById('historyView').style.display = 'none';
+                // Implement Open Orders view if needed
+            }
+        });
     });
     
     initDatePicker();
