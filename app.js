@@ -48,7 +48,18 @@ async function fetchPositions(address) {
     }
     
     const positions = await response.json();
-    renderPositions(positions);
+    
+    // 过滤未关闭的持仓
+    // 根据常见API设计模式，假设存在closed或isOpen字段来标识持仓状态
+    const openPositions = positions.filter(position => {
+        // 尝试多种可能的字段名来判断持仓是否关闭
+        return !position.closed && 
+               position.isOpen !== false && 
+               position.status !== 'closed' &&
+               position.state !== 'closed';
+    });
+    
+    renderPositions(openPositions);
     showLoading(false);
 }
 
@@ -57,7 +68,7 @@ function renderPositions(positions) {
     container.innerHTML = '';
     
     if (!positions || positions.length === 0) {
-        container.innerHTML = '<div class="empty-state">No active positions found</div>';
+        container.innerHTML = '<div class="empty-state">No open positions found</div>';
         return;
     }
     
@@ -131,7 +142,6 @@ function createPositionElement(pos) {
 
 // Renamed from fetchTrades to be specific, but keeping old function for History tab
 async function fetchTrades(address) {
-    // ... existing logic ...
     currentOffset = 0;
     showLoading(true);
     try {
@@ -150,10 +160,6 @@ async function fetchTrades(address) {
         showLoading(false);
     }
 }
-
-// ... existing loadMoreTrades, getTrades, renderTrades, createTradeElement ...
-// I need to update the Search event listener to call handleSearch
-
 
 async function loadMoreTrades() {
     currentOffset += LIMIT;
