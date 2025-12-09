@@ -24,7 +24,15 @@ async function fetchTrades() {
     hideError();
     
     try {
-        const trades = await getTrades(address, 0);
+        let trades = await getTrades(address, 0);
+        
+        // Client-side date filtering
+        if (dpState.startDate && dpState.endDate) {
+            const startTs = dpState.startDate.getTime() / 1000;
+            const endTs = dpState.endDate.getTime() / 1000 + 86400; // End of day
+            trades = trades.filter(t => t.timestamp >= startTs && t.timestamp < endTs);
+        }
+        
         renderTrades(trades, false);
         document.getElementById('loadMore').style.display = trades.length >= LIMIT ? 'block' : 'none';
     } catch (error) {
@@ -39,7 +47,15 @@ async function loadMoreTrades() {
     showLoading(true);
     
     try {
-        const trades = await getTrades(currentAddress, currentOffset);
+        let trades = await getTrades(currentAddress, currentOffset);
+        
+        // Client-side date filtering
+        if (dpState.startDate && dpState.endDate) {
+            const startTs = dpState.startDate.getTime() / 1000;
+            const endTs = dpState.endDate.getTime() / 1000 + 86400; // End of day
+            trades = trades.filter(t => t.timestamp >= startTs && t.timestamp < endTs);
+        }
+
         renderTrades(trades, true);
         document.getElementById('loadMore').style.display = trades.length >= LIMIT ? 'block' : 'none';
     } catch (error) {
@@ -213,4 +229,257 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchTrades();
         }
     });
+    
+    initDatePicker();
 });
+
+// --- Date Picker Logic ---
+let dpState = {
+    isOpen: false,
+    viewDate: new Date(),
+    startDate: null, // Selected and applied
+    endDate: null,   // Selected and applied
+    tempStartDate: null, // Currently selecting in modal
+    tempEndDate: null    // Currently selecting in modal
+};
+
+function initDatePicker() {
+    const btn = document.querySelector('.btn-filter.date-range');
+    const modal = document.getElementById('datePickerModal');
+    const cancelBtn = document.getElementById('cancelDatePicker');
+    const setBtn = document.getElementById('setDates');
+    const clearBtn = document.getElementById('clearDateRange');
+    
+    // Toggle Modal
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleDatePicker();
+    });
+    
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+        if (dpState.isOpen && !modal.contains(e.target) && !btn.contains(e.target)) {
+            closeDatePicker();
+        }
+    });
+    
+    // Footer Buttons
+    cancelBtn.addEventListener('click', closeDatePicker);
+    
+    setBtn.addEventListener('click', () => {
+        dpState.startDate = dpState.tempStartDate;
+        dpState.endDate = dpState.tempEndDate;
+        updateDateButtonLabel();
+        closeDatePicker();
+        // Trigger data refresh if needed
+        if (currentAddress) fetchTrades(); 
+    });
+    
+    clearBtn.addEventListener('click', () => {
+        dpState.tempStartDate = null;
+        dpState.tempEndDate = null;
+        renderCalendar();
+    });
+
+    // Navigation
+    document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
+    document.getElementById('prevYear').addEventListener('click', () => changeYear(-1));
+    document.getElementById('nextYear').addEventListener('click', () => changeYear(1));
+
+    // Sidebar Items
+    document.querySelectorAll('.dp-sidebar-item').forEach(item => {
+        item.addEventListener('click', () => setQuickRange(item.dataset.range));
+    });
+}
+
+function toggleDatePicker() {
+    const modal = document.getElementById('datePickerModal');
+    if (dpState.isOpen) {
+        closeDatePicker();
+    } else {
+        dpState.isOpen = true;
+        modal.style.display = 'block';
+        
+        // Init temp state from actual state
+        dpState.tempStartDate = dpState.startDate;
+        dpState.tempEndDate = dpState.endDate;
+        dpState.viewDate = dpState.endDate || new Date();
+        
+        renderCalendar();
+    }
+}
+
+function closeDatePicker() {
+    dpState.isOpen = false;
+    document.getElementById('datePickerModal').style.display = 'none';
+}
+
+function changeMonth(delta) {
+    dpState.viewDate.setMonth(dpState.viewDate.getMonth() + delta);
+    renderCalendar();
+}
+
+function changeYear(delta) {
+    dpState.viewDate.setFullYear(dpState.viewDate.getFullYear() + delta);
+    renderCalendar();
+}
+
+function renderCalendar() {
+    const year = dpState.viewDate.getFullYear();
+    const month = dpState.viewDate.getMonth();
+    
+    // Update Header
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    document.getElementById('currentMonthLabel').textContent = `${monthNames[month]} ${year}`;
+    
+    const daysContainer = document.getElementById('calendarDays');
+    daysContainer.innerHTML = '';
+    
+    // Logic for days
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay(); // 0 (Sun) to 6 (Sat)
+    
+    // Empty slots for start
+    for (let i = 0; i < startDayOfWeek; i++) {
+        const div = document.createElement('div');
+        div.className = 'dp-day empty';
+        daysContainer.appendChild(div);
+    }
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    // Days
+    for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(year, month, d);
+        const div = document.createElement('div');
+        div.className = 'dp-day';
+        div.textContent = d;
+        
+        // Styles
+        if (date.getTime() === today.getTime()) {
+            div.classList.add('today');
+        }
+        
+        // Range Styles
+        const s = dpState.tempStartDate ? dpState.tempStartDate.getTime() : null;
+        const e = dpState.tempEndDate ? dpState.tempEndDate.getTime() : null;
+        const c = date.getTime();
+        
+        if (s && e) {
+            if (c >= Math.min(s, e) && c <= Math.max(s, e)) {
+                div.classList.add('in-range');
+            }
+            if (c === s) div.classList.add('range-start'); // visual start
+            if (c === e) div.classList.add('range-end');   // visual end
+            // Swap if start > end for visuals? Usually we normalize on set, but visually:
+            if (s > e && c === s) div.classList.replace('range-start', 'range-end');
+            if (s > e && c === e) div.classList.replace('range-end', 'range-start');
+        } else if (s && c === s) {
+            div.classList.add('selected');
+        }
+        
+        div.addEventListener('click', () => selectDate(date));
+        daysContainer.appendChild(div);
+    }
+}
+
+function selectDate(date) {
+    if (!dpState.tempStartDate || (dpState.tempStartDate && dpState.tempEndDate)) {
+        // Start new range
+        dpState.tempStartDate = date;
+        dpState.tempEndDate = null;
+    } else {
+        // Complete range
+        if (date < dpState.tempStartDate) {
+            dpState.tempEndDate = dpState.tempStartDate;
+            dpState.tempStartDate = date;
+        } else {
+            dpState.tempEndDate = date;
+        }
+    }
+    renderCalendar();
+}
+
+function setQuickRange(rangeType) {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    let start, end;
+    
+    switch(rangeType) {
+        case 'today':
+            start = new Date(today);
+            end = new Date(today);
+            break;
+        case 'yesterday':
+            start = new Date(today);
+            start.setDate(today.getDate() - 1);
+            end = new Date(start);
+            break;
+        case 'lastWeek':
+            end = new Date(today);
+            start = new Date(today);
+            start.setDate(today.getDate() - 7);
+            break;
+        case 'lastMonth':
+            end = new Date(today);
+            start = new Date(today);
+            start.setMonth(today.getMonth() - 1);
+            break;
+        case 'last3Months':
+            end = new Date(today);
+            start = new Date(today);
+            start.setMonth(today.getMonth() - 3);
+            break;
+        case 'ytd':
+            end = new Date(today);
+            start = new Date(today.getFullYear(), 0, 1);
+            break;
+        case 'lastYear':
+            start = new Date(today.getFullYear() - 1, 0, 1);
+            end = new Date(today.getFullYear() - 1, 11, 31);
+            break;
+        case 'all':
+            start = null;
+            end = null;
+            break;
+    }
+    
+    dpState.tempStartDate = start;
+    dpState.tempEndDate = end;
+    if (end) dpState.viewDate = new Date(end);
+    renderCalendar();
+    
+    // Highlight sidebar
+    document.querySelectorAll('.dp-sidebar-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.range === rangeType);
+    });
+}
+
+function updateDateButtonLabel() {
+    const btn = document.querySelector('.btn-filter.date-range');
+    if (!dpState.startDate || !dpState.endDate) {
+        btn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            Date Range
+        `;
+        return;
+    }
+    
+    const fmt = d => `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+    btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        ${fmt(dpState.startDate)} - ${fmt(dpState.endDate)}
+    `;
+}
+
+// Modify getTrades to accept date range (client-side filtering for now)
+// We'll wrap the fetch logic. Since API filtering isn't verified, we'll filter the RESULT
+// But since we use pagination, this is tricky. We'll just filter what we get.
+// Ideally we'd pass ?start_date=... to API.

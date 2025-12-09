@@ -337,3 +337,233 @@ body {
         right: 16px;
     }
 }
+
+/* Date Picker Modal */
+.date-picker-modal {
+    position: absolute;
+    top: 140px; /* Adjust based on where button is */
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    width: 600px;
+    font-family: var(--font-family);
+    display: none; /* Hidden by default */
+}
+
+.dp-container {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    min-height: 320px;
+}
+
+/* Sidebar */
+.dp-sidebar {
+    width: 160px;
+    padding: 16px 0;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.dp-sidebar-item {
+    padding: 10px 20px;
+    font-size: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dp-sidebar-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.dp-sidebar-item.active {
+    background-color: var(--hover-bg);
+    font-weight: 600;
+}
+
+/* Main Calendar */
+.dp-main {
+    flex: 1;
+    padding: 20px;
+}
+
+.dp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dp-current-month {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.dp-nav-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: all 0.2s;
+}
+
+.dp-nav-btn:hover {
+    background-color: var(--hover-bg);
+    border-color: #d1d5db;
+}
+
+.dp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.dp-weekdays div {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.dp-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px 0;
+}
+
+.dp-day {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 0;
+    color: var(--text-secondary);
+}
+
+.dp-day:hover:not(.empty) {
+    background-color: var(--hover-bg);
+    color: var(--text-primary);
+    border-radius: 50%;
+}
+
+.dp-day.selected {
+    background-color: #2563eb; /* Blue */
+    color: white;
+    border-radius: 6px;
+}
+
+.dp-day.today {
+    font-weight: 600;
+    color: #2563eb;
+}
+
+.dp-day.empty {
+    cursor: default;
+}
+
+.dp-day.in-range {
+    background-color: #eff6ff;
+    color: var(--text-primary);
+}
+
+.dp-day.range-start {
+    background-color: #2563eb;
+    color: white;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.dp-day.range-end {
+    background-color: #2563eb;
+    color: white;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* Footer */
+.dp-footer {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dp-btn-clear {
+    background: none;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.dp-footer-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.dp-btn-cancel {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.dp-btn-set {
+    padding: 8px 16px;
+    background: #2563eb;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+}
+
+.dp-btn-set:hover {
+    background-color: #1d4ed8;
+}
+
+@media (max-width: 600px) {
+    .date-picker-modal {
+        width: 90%;
+        left: 5%;
+        transform: none;
+        top: 100px;
+    }
+    
+    .dp-container {
+        flex-direction: column;
+    }
+    
+    .dp-sidebar {
+        width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 8px 0;
+    }
+    
+    .dp-sidebar-item {
+        white-space: nowrap;
+        padding: 8px 12px;
+    }
+}

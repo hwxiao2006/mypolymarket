@@ -73,6 +73,60 @@
         </div>
     </div>
 
+    <!-- Date Picker Modal -->
+    <div id="datePickerModal" class="date-picker-modal" style="display: none;">
+        <div class="dp-container">
+            <!-- Sidebar -->
+            <div class="dp-sidebar">
+                <div class="dp-sidebar-item" data-range="today">Today</div>
+                <div class="dp-sidebar-item" data-range="yesterday">Yesterday</div>
+                <div class="dp-sidebar-item" data-range="lastWeek">Last Week</div>
+                <div class="dp-sidebar-item" data-range="lastMonth">Last Month</div>
+                <div class="dp-sidebar-item" data-range="last3Months">Last 3 Months</div>
+                <div class="dp-sidebar-item" data-range="ytd">Year to Date</div>
+                <div class="dp-sidebar-item" data-range="lastYear">Last Year</div>
+                <div class="dp-sidebar-item" data-range="all">All</div>
+            </div>
+
+            <!-- Calendar Area -->
+            <div class="dp-main">
+                <div class="dp-header">
+                    <button class="dp-nav-btn" id="prevMonth">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    <button class="dp-nav-btn" id="prevYear">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+                    </button>
+                    
+                    <span class="dp-current-month" id="currentMonthLabel">December 2025</span>
+                    
+                    <button class="dp-nav-btn" id="nextMonth">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                    <button class="dp-nav-btn" id="nextYear">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+                    </button>
+                </div>
+
+                <div class="dp-weekdays">
+                    <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+                </div>
+                
+                <div class="dp-days" id="calendarDays">
+                    <!-- Days will be injected via JS -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="dp-footer">
+            <button class="dp-btn-clear" id="clearDateRange">Clear Date Range</button>
+            <div class="dp-footer-actions">
+                <button class="dp-btn-cancel" id="cancelDatePicker">Cancel</button>
+                <button class="dp-btn-set" id="setDates">Set Dates</button>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
