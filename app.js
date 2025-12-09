@@ -49,16 +49,24 @@ async function fetchPositions(address) {
     
     const positions = await response.json();
     
+    // 打印详细的数据结构信息用于调试
+    console.log("Full positions data:", positions);
+    
     // 过滤未关闭的持仓
-    // 根据常见API设计模式，假设存在closed或isOpen字段来标识持仓状态
+    // 根据API文档和常见逻辑判断持仓是否关闭
     const openPositions = positions.filter(position => {
-        // 尝试多种可能的字段名来判断持仓是否关闭
-        return !position.closed && 
-               position.isOpen !== false && 
-               position.status !== 'closed' &&
-               position.state !== 'closed';
+        // 判断条件：
+        // 1. 持仓数量大于0
+        // 2. 当前价值大于0（可选）
+        // 3. 如果有endDate字段，且未过期
+        const now = new Date();
+        const endDate = position.endDate ? new Date(position.endDate) : null;
+        const isExpired = endDate && endDate < now;
+        
+        return position.size > 0 && !isExpired;
     });
     
+    console.log("Open positions:", openPositions);
     renderPositions(openPositions);
     showLoading(false);
 }
