@@ -194,22 +194,27 @@ async function loadMoreTrades() {
 }
 
 async function getTrades(address, offset) {
-    // 构建基础URL
+    // 默认使用/trades端点
     let url = `${API_BASE}/trades?user=${address}&limit=${LIMIT}&offset=${offset}`;
     
     // 如果有日期范围，使用/activity端点并添加时间参数
     if (dpState.startDate && dpState.endDate) {
+        // 转换日期为Unix时间戳（秒）
         const startTime = Math.floor(dpState.startDate.getTime() / 1000);
-        const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86400; // 加一天以包含结束日期的所有交易
+        const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399; // 加一天减一秒以包含结束日期的所有交易
         
         // 使用/activity端点，它支持start和end参数
         url = `${API_BASE}/activity?user=${address}&limit=${LIMIT}&offset=${offset}&start=${startTime}&end=${endTime}&type=TRADE`;
     }
     
+    console.log("Fetching trades from URL:", url); // 调试信息
+    
     const response = await fetch(url);
     
     if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+        const errorText = await response.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(`API returned ${response.status}: ${errorText}`);
     }
     
     return await response.json();
@@ -221,6 +226,8 @@ function renderTrades(trades, append) {
     if (!append) {
         container.innerHTML = '';
     }
+    
+    console.log("Rendering trades:", trades); // 调试信息
     
     // 检查是否是来自/activity端点的数据，如果是，则过滤出TRADE类型
     if (trades.length > 0 && trades[0].type) {
