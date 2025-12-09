@@ -69,7 +69,7 @@ function renderTrades(trades, append) {
     }
     
     if (trades.length === 0 && !append) {
-        container.innerHTML = '<div class="empty-state"><p>No trades found for this address</p></div>';
+        container.innerHTML = '<div class="empty-state">No trades found for this address</div>';
         return;
     }
     
@@ -81,43 +81,83 @@ function renderTrades(trades, append) {
 
 function createTradeElement(trade) {
     const div = document.createElement('div');
-    div.className = 'trade-item';
+    div.className = 'trade-row';
     
+    // --- Activity Logic ---
+    // The API returns 'side' as BUY or SELL. 
+    // We map this to 'Bought' / 'Sold'.
+    // Note: 'Claimed' is not in standard trades endpoint usually, but we'll stick to what we have.
     const isBuy = trade.side === 'BUY';
-    const sideClass = isBuy ? 'side-buy' : 'side-sell';
-    const sideText = isBuy ? 'Bought' : 'Sold';
+    const activityLabel = isBuy ? 'Bought' : 'Sold';
     
-    const outcomeClass = trade.outcome?.toLowerCase() === 'yes' ? 'outcome-yes' : 'outcome-no';
-    const outcomeText = trade.outcome || 'N/A';
+    // Icons
+    let activityIconSvg = '';
+    let activityIconClass = '';
     
-    const amount = (trade.size * trade.price).toFixed(2);
-    const shares = trade.size?.toFixed(2) || '0';
-    const price = (trade.price * 100).toFixed(1);
-    
-    const timestamp = formatTime(trade.timestamp);
-    
+    if (activityLabel === 'Claimed') {
+        // Placeholder for future logic if we can detect claims
+        activityIconClass = 'icon-claimed';
+        activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    } else if (activityLabel === 'Bought') {
+        activityIconClass = 'icon-bought';
+        activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    } else { // Sold
+        activityIconClass = 'icon-sold';
+        activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    }
+
+    // --- Market Logic ---
+    const marketTitle = trade.title || 'Unknown Market';
     const marketUrl = trade.eventSlug 
         ? `https://polymarket.com/event/${trade.eventSlug}` 
         : (trade.slug ? `https://polymarket.com/event/${trade.slug}` : '#');
     
-    const iconSrc = trade.icon || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="%232d2d2d" width="40" height="40"/></svg>';
+    const iconSrc = trade.icon || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="%23f3f4f6" width="40" height="40"/></svg>';
+
+    // Outcome Badge
+    const outcomeText = trade.outcome || 'N/A';
+    const outcomeClass = outcomeText.toLowerCase() === 'yes' ? 'badge-yes' : 'badge-no';
     
+    // Shares & Price
+    const shares = trade.size?.toFixed(1) || '0.0';
+    const priceCents = (trade.price * 100).toFixed(0);
+
+    // --- Value Logic ---
+    // Value = Price * Size. 
+    // If Bought, usually negative cash flow in activity view? 
+    // Checking screenshot: "Bought ... -$1.14". "Claimed ... +$10.00".
+    // So Bought is negative, Sold is positive.
+    const rawValue = trade.size * trade.price;
+    const valueSign = isBuy ? '-' : '+';
+    const valueClass = isBuy ? 'val-neg' : 'val-pos'; // Bought is cost (black/red), Sold is income (green)
+    const formattedValue = `${valueSign}$${rawValue.toFixed(2)}`;
+
+    // Time
+    const timestamp = formatTime(trade.timestamp);
+
     div.innerHTML = `
-        <img class="trade-icon" src="${escapeHtml(iconSrc)}" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><rect fill=%22%232d2d2d%22 width=%2240%22 height=%2240%22/></svg>'">
-        <div class="trade-info">
-            <a class="trade-market" href="${escapeHtml(marketUrl)}" target="_blank" rel="noopener noreferrer">
-                ${escapeHtml(trade.title || 'Unknown Market')}
-            </a>
-            <div class="trade-details">
-                <span class="trade-outcome ${outcomeClass}">${escapeHtml(outcomeText)}</span>
-                <span>${shares} shares @ ${price}¢</span>
+        <div class="cell-activity">
+            <div class="activity-icon-wrapper ${activityIconClass}">
+                ${activityIconSvg}
+            </div>
+            <span class="activity-label">${activityLabel}</span>
+        </div>
+        
+        <div class="cell-market">
+            <img class="market-icon" src="${escapeHtml(iconSrc)}" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><rect fill=%22%23f3f4f6%22 width=%2240%22 height=%2240%22/></svg>'">
+            <div class="market-content">
+                <a href="${escapeHtml(marketUrl)}" class="market-title" target="_blank">${escapeHtml(marketTitle)}</a>
+                <div class="market-sub">
+                    <span class="outcome-badge ${outcomeClass}">${escapeHtml(outcomeText)} ${priceCents}¢</span>
+                    <span>${shares} shares</span>
+                </div>
             </div>
         </div>
-        <div class="trade-side">
-            <div class="side-label ${sideClass}">${sideText}</div>
-            <div class="trade-amount">$${amount}</div>
+        
+        <div class="cell-value">
+            <span class="value-amount ${valueClass}">${formattedValue}</span>
+            <span class="time-ago">${timestamp}</span>
         </div>
-        <div class="trade-time">${timestamp}</div>
     `;
     
     return div;
@@ -140,8 +180,7 @@ function formatTime(timestamp) {
     
     return date.toLocaleDateString('en-US', { 
         month: 'short', 
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        day: 'numeric'
     });
 }
 
@@ -153,8 +192,8 @@ function escapeHtml(text) {
 }
 
 function showLoading(show) {
-    document.getElementById('loading').style.display = show ? 'flex' : 'none';
-    document.getElementById('searchBtn').disabled = show;
+    document.getElementById('loading').style.display = show ? 'block' : 'none';
+    const searchBtn = document.getElementById('searchBtn'); // Search is now implicit via enter, but input exists
 }
 
 function showError(message) {
