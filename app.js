@@ -154,12 +154,6 @@ async function fetchTrades(address) {
     showLoading(true);
     try {
         let trades = await getTrades(address, 0);
-         // Client-side date filtering
-        if (dpState.startDate && dpState.endDate) {
-            const startTs = dpState.startDate.getTime() / 1000;
-            const endTs = dpState.endDate.getTime() / 1000 + 86400; 
-            trades = trades.filter(t => t.timestamp >= startTs && t.timestamp < endTs);
-        }
         renderTrades(trades, false);
         document.getElementById('loadMore').style.display = trades.length >= LIMIT ? 'block' : 'none';
     } catch (error) {
@@ -176,13 +170,6 @@ async function loadMoreTrades() {
     try {
         let trades = await getTrades(currentAddress, currentOffset);
         
-        // Client-side date filtering
-        if (dpState.startDate && dpState.endDate) {
-            const startTs = dpState.startDate.getTime() / 1000;
-            const endTs = dpState.endDate.getTime() / 1000 + 86399; // End of day
-            trades = trades.filter(t => t.timestamp >= startTs && t.timestamp < endTs);
-        }
-
         renderTrades(trades, true);
         document.getElementById('loadMore').style.display = trades.length >= LIMIT ? 'block' : 'none';
     } catch (error) {
