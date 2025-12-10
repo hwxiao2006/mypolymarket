@@ -80,10 +80,48 @@ function renderPositions(positions) {
         return;
     }
     
+    // Calculate totals
+    let totalBet = 0;
+    let totalToWin = 0;
+    let totalValue = 0;
+    
     positions.forEach(pos => {
+        const size = parseFloat(pos.size || 0);
+        const avgPrice = parseFloat(pos.avgPrice || pos.buyPrice || 0);
+        const currentPrice = parseFloat(pos.curPrice || pos.currentPrice || pos.price || avgPrice);
+        
+        totalBet += size * avgPrice;
+        totalToWin += size;
+        totalValue += size * currentPrice;
+        
         const el = createPositionElement(pos);
         container.appendChild(el);
     });
+    
+    // Add totals row
+    const totalPnl = totalValue - totalBet;
+    const totalPnlPercent = totalBet > 0 ? (totalPnl / totalBet) * 100 : 0;
+    const pnlClass = totalPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+    const pnlSign = totalPnl >= 0 ? '+' : '-';
+    
+    const totalsRow = document.createElement('div');
+    totalsRow.className = 'position-row totals-row';
+    totalsRow.innerHTML = `
+        <div class="cell-market">
+            <div class="market-content">
+                <span class="totals-label">Total</span>
+            </div>
+        </div>
+        <div class="price-change-cell"></div>
+        <div class="money-cell totals-value">$${totalBet.toFixed(2)}</div>
+        <div class="money-cell totals-value">$${totalToWin.toFixed(2)}</div>
+        <div class="value-cell-group">
+            <div class="money-cell totals-value">$${totalValue.toFixed(2)}</div>
+            <div class="pnl-text ${pnlClass}">${pnlSign}$${Math.abs(totalPnl).toFixed(2)} (${Math.abs(totalPnlPercent).toFixed(2)}%)</div>
+        </div>
+        <div class="pos-actions"></div>
+    `;
+    container.appendChild(totalsRow);
 }
 
 function createPositionElement(pos) {

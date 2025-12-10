@@ -689,3 +689,24 @@ body {
         padding: 8px 12px;
     }
 }
+
+/* Totals Row */
+.totals-row {
+    background-color: #f9fafb;
+    border-top: 2px solid var(--border-color);
+    font-weight: 600;
+}
+
+.totals-row:hover {
+    background-color: #f9fafb;
+}
+
+.totals-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.totals-value {
+    font-weight: 600;
+}
