@@ -249,6 +249,11 @@ body {
     background: #cffafe;
 }
 
+.icon-lost {
+    color: var(--text-red);
+    background: var(--red-badge-bg);
+}
+
 .icon-default {
     color: var(--text-secondary);
     background: #f3f4f6;

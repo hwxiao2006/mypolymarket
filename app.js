@@ -219,34 +219,21 @@ async function loadMoreTrades() {
 }
 
 async function getTrades(address, offset) {
-    // 创建URLSearchParams对象来确保参数正确编码
+    // 始终使用/activity端点获取所有类型的活动记录
     const params = new URLSearchParams();
     params.append('user', address);
     params.append('limit', LIMIT);
     params.append('offset', offset);
     
-    // 默认使用/trades端点
-    let url = `${API_BASE}/trades?${params.toString()}`;
-    
-    // 如果有日期范围，使用/activity端点并添加时间参数
+    // 如果有日期范围，添加时间参数
     if (dpState.startDate && dpState.endDate) {
-        // 重新创建参数对象以避免携带不必要的参数
-        const activityParams = new URLSearchParams();
-        activityParams.append('user', address);
-        activityParams.append('limit', LIMIT);
-        activityParams.append('offset', offset);
-        
-        // 转换日期为Unix时间戳（秒）
         const startTime = Math.floor(dpState.startDate.getTime() / 1000);
-        const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399; // 加一天减一秒以包含结束日期的所有交易
-        
-        activityParams.append('start', startTime);
-        activityParams.append('end', endTime);
-        // 不限制type，获取所有类型的活动
-        
-        // 使用/activity端点，它支持start和end参数
-        url = `${API_BASE}/activity?${activityParams.toString()}`;
+        const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399;
+        params.append('start', startTime);
+        params.append('end', endTime);
     }
+    
+    const url = `${API_BASE}/activity?${params.toString()}`;
     
     console.log("Fetching trades from URL:", url); // 调试信息
     
@@ -341,6 +328,12 @@ function createTradeElement(trade) {
             isPositiveValue = true;
             activityIconClass = 'icon-conversion';
             activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
+            break;
+        case 'LOST':
+            activityLabel = 'Lost';
+            isPositiveValue = false;
+            activityIconClass = 'icon-lost';
+            activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
             break;
         default:
             activityLabel = activityType;
