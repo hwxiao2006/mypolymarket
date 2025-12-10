@@ -460,7 +460,7 @@ function initDatePicker() {
         updateDateButtonLabel();
         closeDatePicker();
         // Trigger data refresh if needed
-        if (currentAddress) fetchTrades(); 
+        if (currentAddress) fetchTrades(currentAddress); 
     });
     
     clearBtn.addEventListener('click', () => {
