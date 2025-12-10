@@ -245,7 +245,41 @@ async function getTrades(address, offset) {
         throw new Error(`API returned ${response.status}: ${errorText}`);
     }
     
-    return await response.json();
+    let activities = await response.json();
+    
+    // 获取closed-positions来补充输的订单
+    if (offset === 0) {
+        try {
+            const closedUrl = `${API_BASE}/closed-positions?user=${address}&limit=${LIMIT}`;
+            console.log("Fetching closed positions from:", closedUrl);
+            const closedResp = await fetch(closedUrl);
+            if (closedResp.ok) {
+                const closedPositions = await closedResp.json();
+                console.log("Closed positions:", closedPositions);
+                // 找出输的订单（curPrice接近0且已结算）
+                const lostOrders = closedPositions.filter(p => {
+                    const curPrice = parseFloat(p.curPrice || 0);
+                    return curPrice < 0.01; // 价格接近0表示输了
+                }).map(p => ({
+                    type: 'LOST',
+                    title: p.title || 'Unknown Market',
+                    icon: p.icon,
+                    eventSlug: p.eventSlug || p.slug,
+                    outcome: p.outcome,
+                    size: p.size,
+                    usdcSize: 0, // 输了没有收益
+                    price: 0,
+                    timestamp: p.endDate ? Math.floor(new Date(p.endDate).getTime() / 1000) : Date.now() / 1000
+                }));
+                console.log("Lost orders:", lostOrders);
+                activities = [...activities, ...lostOrders];
+            }
+        } catch (e) {
+            console.log("Failed to fetch closed positions:", e);
+        }
+    }
+    
+    return activities;
 }
 
 function renderTrades(trades, append) {
