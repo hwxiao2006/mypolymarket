@@ -259,6 +259,9 @@ function renderTrades(trades, append) {
     // 打印所有活动类型用于调试
     const types = [...new Set(trades.map(t => t.type))];
     console.log("Activity types found:", types);
+    // 打印REDEEM记录的usdcSize用于调试
+    const redeems = trades.filter(t => t.type === 'REDEEM');
+    console.log("REDEEM records:", redeems.map(r => ({ title: r.title, usdcSize: r.usdcSize })));
     
     if (trades.length === 0 && !append) {
         container.innerHTML = '<div class="empty-state">No trades found for this address</div>';
