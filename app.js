@@ -300,7 +300,7 @@ function createTradeElement(trade) {
         case 'CLAIM':
             // 根据价格判断是赢了(Claimed)还是输了(Lost)
             const redeemPrice = parseFloat(trade.price || 0);
-            console.log("REDEEM price:", redeemPrice, "title:", trade.title); // 调试
+            console.log("REDEEM full data:", trade); // 打印完整数据
             // 价格接近1表示赢了(Claimed)，接近0表示输了(Lost)
             if (redeemPrice > 0.5) {
                 activityLabel = 'Claimed';
