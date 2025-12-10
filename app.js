@@ -256,6 +256,9 @@ function renderTrades(trades, append) {
     }
     
     console.log("Rendering trades:", trades); // 调试信息
+    // 打印所有活动类型用于调试
+    const types = [...new Set(trades.map(t => t.type))];
+    console.log("Activity types found:", types);
     
     if (trades.length === 0 && !append) {
         container.innerHTML = '<div class="empty-state">No trades found for this address</div>';
@@ -330,6 +333,9 @@ function createTradeElement(trade) {
             activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
             break;
         case 'LOST':
+        case 'LOSS':
+        case 'EXPIRE':
+        case 'EXPIRED':
             activityLabel = 'Lost';
             isPositiveValue = false;
             activityIconClass = 'icon-lost';
