@@ -97,7 +97,7 @@ function createPositionElement(pos) {
     const outcomeClass = outcome.toLowerCase() === 'yes' ? 'badge-yes' : 'badge-no';
     const size = parseFloat(pos.size || 0);
     const avgPrice = parseFloat(pos.avgPrice || pos.buyPrice || 0); // Avg entry
-    const currentPrice = parseFloat(pos.currentPrice || pos.price || avgPrice); // Current market price
+    const currentPrice = parseFloat(pos.curPrice || pos.currentPrice || pos.price || avgPrice); // Current market price
     
     const bet = size * avgPrice;
     const value = size * currentPrice;
