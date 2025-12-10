@@ -299,18 +299,19 @@ function createTradeElement(trade) {
         case 'REDEEM':
         case 'CLAIM':
             // 根据价格判断是赢了(Claimed)还是输了(Lost)
-            // 价格为0或接近0表示输了
             const redeemPrice = parseFloat(trade.price || 0);
-            if (redeemPrice < 0.01) {
-                activityLabel = 'Lost';
-                isPositiveValue = false;
-                activityIconClass = 'icon-lost';
-                activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-            } else {
+            console.log("REDEEM price:", redeemPrice, "title:", trade.title); // 调试
+            // 价格接近1表示赢了(Claimed)，接近0表示输了(Lost)
+            if (redeemPrice > 0.5) {
                 activityLabel = 'Claimed';
                 isPositiveValue = true;
                 activityIconClass = 'icon-claimed';
                 activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            } else {
+                activityLabel = 'Lost';
+                isPositiveValue = false;
+                activityIconClass = 'icon-lost';
+                activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
             }
             break;
         case 'MERGE':
