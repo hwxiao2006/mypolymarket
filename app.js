@@ -242,7 +242,7 @@ async function getTrades(address, offset) {
         
         activityParams.append('start', startTime);
         activityParams.append('end', endTime);
-        activityParams.append('type', 'TRADE');
+        // 不限制type，获取所有类型的活动
         
         // 使用/activity端点，它支持start和end参数
         url = `${API_BASE}/activity?${activityParams.toString()}`;
@@ -270,11 +270,6 @@ function renderTrades(trades, append) {
     
     console.log("Rendering trades:", trades); // 调试信息
     
-    // 检查是否是来自/activity端点的数据，如果是，则过滤出TRADE类型
-    if (trades.length > 0 && trades[0].type) {
-        trades = trades.filter(t => t.type === 'TRADE');
-    }
-    
     if (trades.length === 0 && !append) {
         container.innerHTML = '<div class="empty-state">No trades found for this address</div>';
         return;
@@ -291,30 +286,69 @@ function createTradeElement(trade) {
     div.className = 'trade-row';
     
     // --- Activity Logic ---
-    // 处理来自不同端点的数据结构
-    // /trades 端点使用 side 字段
-    // /activity 端点使用 side 字段，但包装在不同的结构中
-    const isBuy = trade.side === 'BUY';
-    const activityLabel = isBuy ? 'Bought' : 'Sold';
-    
-    // Icons
+    // 支持多种活动类型: TRADE, REDEEM, CLAIM, MERGE, SPLIT, REWARD, CONVERSION
+    const activityType = trade.type || 'TRADE';
+    let activityLabel = '';
     let activityIconSvg = '';
     let activityIconClass = '';
+    let isPositiveValue = false; // 是否为正向现金流
     
-    if (activityLabel === 'Claimed') {
-        // Placeholder for future logic if we can detect claims
-        activityIconClass = 'icon-claimed';
-        activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-    } else if (activityLabel === 'Bought') {
-        activityIconClass = 'icon-bought';
-        activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
-    } else { // Sold
-        activityIconClass = 'icon-sold';
-        activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    switch(activityType) {
+        case 'TRADE':
+            const isBuy = trade.side === 'BUY';
+            activityLabel = isBuy ? 'Bought' : 'Sold';
+            isPositiveValue = !isBuy;
+            if (isBuy) {
+                activityIconClass = 'icon-bought';
+                activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+            } else {
+                activityIconClass = 'icon-sold';
+                activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+            }
+            break;
+        case 'REDEEM':
+            activityLabel = 'Redeemed';
+            isPositiveValue = true;
+            activityIconClass = 'icon-claimed';
+            activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            break;
+        case 'CLAIM':
+            activityLabel = 'Claimed';
+            isPositiveValue = true;
+            activityIconClass = 'icon-claimed';
+            activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            break;
+        case 'MERGE':
+            activityLabel = 'Merged';
+            isPositiveValue = true;
+            activityIconClass = 'icon-merge';
+            activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v12M16 6v12M8 12h8"></path></svg>`;
+            break;
+        case 'SPLIT':
+            activityLabel = 'Split';
+            isPositiveValue = false;
+            activityIconClass = 'icon-split';
+            activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3v18M8 3v18M8 12h8"></path></svg>`;
+            break;
+        case 'REWARD':
+            activityLabel = 'Reward';
+            isPositiveValue = true;
+            activityIconClass = 'icon-reward';
+            activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+            break;
+        case 'CONVERSION':
+            activityLabel = 'Converted';
+            isPositiveValue = true;
+            activityIconClass = 'icon-conversion';
+            activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`;
+            break;
+        default:
+            activityLabel = activityType;
+            activityIconClass = 'icon-default';
+            activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle></svg>`;
     }
 
     // --- Market Logic ---
-    // 处理来自不同端点的数据结构
     const marketTitle = trade.title || 'Unknown Market';
     const marketUrl = trade.eventSlug 
         ? `https://polymarket.com/event/${trade.eventSlug}` 
@@ -327,19 +361,14 @@ function createTradeElement(trade) {
     const outcomeClass = outcomeText.toLowerCase() === 'yes' ? 'badge-yes' : 'badge-no';
     
     // Shares & Price
-    // 处理来自不同端点的数据结构
     const shares = (trade.size || trade.usdcSize || 0).toFixed(1);
     const price = trade.price || 0;
     const priceCents = (price * 100).toFixed(0);
 
     // --- Value Logic ---
-    // Value = Price * Size. 
-    // If Bought, usually negative cash flow in activity view? 
-    // Checking screenshot: "Bought ... -$1.14". "Claimed ... +$10.00".
-    // So Bought is negative, Sold is positive.
-    const rawValue = (trade.size || trade.usdcSize || 0) * price;
-    const valueSign = isBuy ? '-' : '+';
-    const valueClass = isBuy ? 'val-neg' : 'val-pos'; // Bought is cost (black/red), Sold is income (green)
+    const rawValue = (trade.size || trade.usdcSize || trade.value || 0) * (price || 1);
+    const valueSign = isPositiveValue ? '+' : '-';
+    const valueClass = isPositiveValue ? 'val-pos' : 'val-neg';
     const formattedValue = `${valueSign}$${rawValue.toFixed(2)}`;
 
     // Time

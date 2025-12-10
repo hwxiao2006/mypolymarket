@@ -229,6 +229,31 @@ body {
     background: #f3f4f6;
 }
 
+.icon-merge {
+    color: #8b5cf6;
+    background: #ede9fe;
+}
+
+.icon-split {
+    color: #f59e0b;
+    background: #fef3c7;
+}
+
+.icon-reward {
+    color: #eab308;
+    background: #fef9c3;
+}
+
+.icon-conversion {
+    color: #06b6d4;
+    background: #cffafe;
+}
+
+.icon-default {
+    color: var(--text-secondary);
+    background: #f3f4f6;
+}
+
 .activity-label {
     font-size: 14px;
     font-weight: 500;
