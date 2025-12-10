@@ -298,11 +298,10 @@ function createTradeElement(trade) {
             break;
         case 'REDEEM':
         case 'CLAIM':
-            // 根据价格判断是赢了(Claimed)还是输了(Lost)
-            const redeemPrice = parseFloat(trade.price || 0);
-            console.log("REDEEM full data:", trade); // 打印完整数据
-            // 价格接近1表示赢了(Claimed)，接近0表示输了(Lost)
-            if (redeemPrice > 0.5) {
+            // 根据usdcSize判断是赢了(Claimed)还是输了(Lost)
+            // usdcSize > 0 表示赢了（拿回了钱），= 0 表示输了
+            const redeemAmount = parseFloat(trade.usdcSize || 0);
+            if (redeemAmount > 0) {
                 activityLabel = 'Claimed';
                 isPositiveValue = true;
                 activityIconClass = 'icon-claimed';
@@ -371,10 +370,16 @@ function createTradeElement(trade) {
     const priceCents = (price * 100).toFixed(0);
 
     // --- Value Logic ---
-    const rawValue = (trade.size || trade.usdcSize || trade.value || 0) * (price || 1);
+    let rawValue;
+    if (activityType === 'REDEEM' || activityType === 'CLAIM') {
+        // REDEEM类型直接使用usdcSize
+        rawValue = parseFloat(trade.usdcSize || 0);
+    } else {
+        rawValue = (trade.size || trade.usdcSize || trade.value || 0) * (price || 1);
+    }
     const valueSign = isPositiveValue ? '+' : '-';
     const valueClass = isPositiveValue ? 'val-pos' : 'val-neg';
-    const formattedValue = `${valueSign}$${rawValue.toFixed(2)}`;
+    const formattedValue = rawValue > 0 ? `${valueSign}$${rawValue.toFixed(2)}` : '-';
 
     // Time
     const timestamp = formatTime(trade.timestamp);
