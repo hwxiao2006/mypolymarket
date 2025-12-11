@@ -926,10 +926,14 @@ html {
         border-radius: 8px;
         margin: 12px 0;
         border: 1px solid var(--border-color);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
     }
     
     .totals-row .cell-market {
-        margin-bottom: 16px;
+        margin-bottom: 4px;
+        grid-column: 1 / -1;
     }
     
     .totals-row .totals-label {
@@ -943,26 +947,25 @@ html {
     }
     
     .totals-row .money-cell {
-        display: inline-flex;
+        display: flex;
         flex-direction: column;
         align-items: flex-start;
-        margin-right: 20px;
-        margin-bottom: 12px;
         font-size: 14px;
+        margin: 0; /* Reset margins from other rules */
     }
     
     .totals-row .money-cell::before {
         font-size: 11px;
         color: var(--text-secondary);
         font-weight: 500;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
     }
     
-    .totals-row .money-cell:nth-of-type(2)::before {
+    .totals-row .cell-total-bet::before {
         content: 'Total Bet';
     }
     
-    .totals-row .money-cell:nth-of-type(3)::before {
+    .totals-row .cell-total-towin::before {
         content: 'To Win';
     }
     
@@ -973,10 +976,10 @@ html {
         padding-top: 12px;
         margin-top: 4px;
         border-top: 1px solid var(--border-color);
+        grid-column: 1 / -1;
     }
     
     .totals-row .value-cell-group .money-cell {
-        margin: 0;
         flex-direction: column;
     }
     

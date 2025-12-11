@@ -113,8 +113,8 @@ function renderPositions(positions) {
             </div>
         </div>
         <div class="price-change-cell"></div>
-        <div class="money-cell totals-value">$${totalBet.toFixed(2)}</div>
-        <div class="money-cell totals-value">$${totalToWin.toFixed(2)}</div>
+        <div class="money-cell totals-value cell-total-bet">$${totalBet.toFixed(2)}</div>
+        <div class="money-cell totals-value cell-total-towin">$${totalToWin.toFixed(2)}</div>
         <div class="value-cell-group">
             <div class="money-cell totals-value">$${totalValue.toFixed(2)}</div>
             <div class="pnl-text ${pnlClass}">${pnlSign}$${Math.abs(totalPnl).toFixed(2)} (${Math.abs(totalPnlPercent).toFixed(2)}%)</div>
