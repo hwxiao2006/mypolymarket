@@ -271,6 +271,18 @@ async function getTrades(address, offset) {
                     console.log("First position keys:", Object.keys(p));
                     console.log("First position data:", p);
                 }
+                // 查找特定订单 nhl-col-nsh-2025-12-10
+                const targetOrder = closedPositions.find(p => 
+                    p.slug && p.slug.includes('col-nsh') || 
+                    p.eventSlug && p.eventSlug.includes('col-nsh') ||
+                    p.title && p.title.toLowerCase().includes('avalanche')
+                );
+                if (targetOrder) {
+                    console.log("=== TARGET ORDER (Avalanche) FOUND ===");
+                    console.log("Full data:", targetOrder);
+                } else {
+                    console.log("=== TARGET ORDER NOT FOUND in closed positions ===");
+                }
                 // 找出输的订单 - curPrice接近0表示输了
                 const lostOrders = closedPositions.filter(p => {
                     const curPrice = parseFloat(p.curPrice || 0);
