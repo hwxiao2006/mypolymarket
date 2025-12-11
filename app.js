@@ -254,43 +254,59 @@ async function getTrades(address, offset) {
     );
     console.log("=== COL vs NSH in ACTIVITY ===", colNshInActivity);
     
-    // 尝试获取redemptions数据（输的订单赎回$0）
+    // 使用Subgraph查询用户positions（包括已结算的输的订单）
     console.log("Offset value:", offset);
     if (offset === 0) {
         try {
-            let redemptionsUrl = `${API_BASE}/redemptions?user=${address}&limit=${LIMIT}`;
-            if (dpState.startDate && dpState.endDate) {
-                const startTime = Math.floor(dpState.startDate.getTime() / 1000);
-                const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399;
-                redemptionsUrl += `&start=${startTime}&end=${endTime}`;
-            }
-            console.log("Fetching redemptions from:", redemptionsUrl);
-            const redemptionsResp = await fetch(redemptionsUrl);
-            console.log("Redemptions response status:", redemptionsResp.status);
-            if (redemptionsResp.ok) {
-                const redemptions = await redemptionsResp.json();
-                console.log("Redemptions data:", redemptions);
-                // 找出赎回金额为0或接近0的记录（输的订单）
-                const lostFromRedemptions = redemptions.filter(r => {
-                    const amount = parseFloat(r.usdcSize || r.amount || r.value || 0);
-                    console.log(`Redemption: amount=${amount}, title=${r.title}`);
-                    return amount < 0.01;
-                }).map(r => ({
-                    type: 'LOST',
-                    title: r.title || 'Unknown Market',
-                    icon: r.icon,
-                    eventSlug: r.eventSlug || r.slug,
-                    outcome: r.outcome,
-                    size: r.size || 0,
-                    usdcSize: 0,
-                    price: 0,
-                    timestamp: r.timestamp
-                }));
-                console.log("Lost from redemptions:", lostFromRedemptions);
-                activities = [...activities, ...lostFromRedemptions];
+            const SUBGRAPH_URL = 'https://api.thegraph.com/subgraphs/name/polymarket/polymarket-matic';
+            const query = `{
+                userPositions(where: {user: "${address.toLowerCase()}"}, first: 100) {
+                    id
+                    user
+                    market {
+                        id
+                        question
+                        resolution
+                        resolutionTimestamp
+                    }
+                    outcome
+                    shares
+                    avgPrice
+                }
+            }`;
+            console.log("Querying Subgraph...");
+            const subgraphResp = await fetch(SUBGRAPH_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            console.log("Subgraph response status:", subgraphResp.status);
+            if (subgraphResp.ok) {
+                const data = await subgraphResp.json();
+                console.log("Subgraph data:", data);
+                if (data.data && data.data.userPositions) {
+                    // 找出已结算且持仓方向与resolution不符的订单（输的）
+                    const lostPositions = data.data.userPositions.filter(p => {
+                        if (!p.market.resolution) return false;
+                        const resolution = p.market.resolution;
+                        const outcome = p.outcome;
+                        // resolution是赢的outcome，如果用户持有的不是这个outcome就输了
+                        return resolution !== outcome;
+                    }).map(p => ({
+                        type: 'LOST',
+                        title: p.market.question || 'Unknown Market',
+                        outcome: p.outcome,
+                        size: parseFloat(p.shares || 0),
+                        usdcSize: parseFloat(p.shares || 0) * parseFloat(p.avgPrice || 0),
+                        price: parseFloat(p.avgPrice || 0),
+                        timestamp: parseInt(p.market.resolutionTimestamp || 0)
+                    }));
+                    console.log("Lost positions from Subgraph:", lostPositions);
+                    activities = [...activities, ...lostPositions];
+                }
             }
         } catch (e) {
-            console.log("Failed to fetch redemptions:", e);
+            console.log("Failed to query Subgraph:", e);
         }
     }
     
