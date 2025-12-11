@@ -254,8 +254,47 @@ async function getTrades(address, offset) {
     );
     console.log("=== COL vs NSH in ACTIVITY ===", colNshInActivity);
     
+    // 尝试获取redemptions数据（输的订单赎回$0）
+    console.log("Offset value:", offset);
+    if (offset === 0) {
+        try {
+            let redemptionsUrl = `${API_BASE}/redemptions?user=${address}&limit=${LIMIT}`;
+            if (dpState.startDate && dpState.endDate) {
+                const startTime = Math.floor(dpState.startDate.getTime() / 1000);
+                const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399;
+                redemptionsUrl += `&start=${startTime}&end=${endTime}`;
+            }
+            console.log("Fetching redemptions from:", redemptionsUrl);
+            const redemptionsResp = await fetch(redemptionsUrl);
+            console.log("Redemptions response status:", redemptionsResp.status);
+            if (redemptionsResp.ok) {
+                const redemptions = await redemptionsResp.json();
+                console.log("Redemptions data:", redemptions);
+                // 找出赎回金额为0或接近0的记录（输的订单）
+                const lostFromRedemptions = redemptions.filter(r => {
+                    const amount = parseFloat(r.usdcSize || r.amount || r.value || 0);
+                    console.log(`Redemption: amount=${amount}, title=${r.title}`);
+                    return amount < 0.01;
+                }).map(r => ({
+                    type: 'LOST',
+                    title: r.title || 'Unknown Market',
+                    icon: r.icon,
+                    eventSlug: r.eventSlug || r.slug,
+                    outcome: r.outcome,
+                    size: r.size || 0,
+                    usdcSize: 0,
+                    price: 0,
+                    timestamp: r.timestamp
+                }));
+                console.log("Lost from redemptions:", lostFromRedemptions);
+                activities = [...activities, ...lostFromRedemptions];
+            }
+        } catch (e) {
+            console.log("Failed to fetch redemptions:", e);
+        }
+    }
+    
     // 获取closed-positions来补充输的订单
-    console.log("Offset value:", offset); // 调试
     if (offset === 0) {
         console.log("Fetching closed positions..."); // 调试
         try {
