@@ -247,6 +247,13 @@ async function getTrades(address, offset) {
     
     let activities = await response.json();
     
+    // 在activity中搜索COL vs NSH订单
+    const colNshInActivity = activities.filter(a => 
+        (a.title && (a.title.toLowerCase().includes('nashville') || a.title.toLowerCase().includes('predators'))) ||
+        (a.eventSlug && a.eventSlug.includes('col-nsh'))
+    );
+    console.log("=== COL vs NSH in ACTIVITY ===", colNshInActivity);
+    
     // 获取closed-positions来补充输的订单
     console.log("Offset value:", offset); // 调试
     if (offset === 0) {
