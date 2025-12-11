@@ -851,46 +851,81 @@ html {
     
     /* Position Row - Mobile Card Style */
     .position-row {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        padding: 12px;
-        grid-template-columns: none;
-        width: 100%;
+        display: block;
+        padding: 14px;
     }
     
     .position-row .cell-market {
-        order: 1;
+        padding-right: 0;
+        margin-bottom: 12px;
     }
     
+    /* Stats grid */
     .position-row .price-change-cell {
-        order: 2;
-        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        font-size: 12px;
+        background: var(--hover-bg);
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-right: 8px;
+        margin-bottom: 8px;
     }
     
     .position-row .price-change-cell::before {
-        content: 'Price: ';
-        color: var(--text-secondary);
-        font-size: 12px;
-        margin-right: 4px;
+        display: none;
     }
     
-    /* Position stats row */
-    .position-row .money-cell,
+    .position-row .money-cell {
+        display: inline-block;
+        font-size: 12px;
+        margin-right: 12px;
+        margin-bottom: 8px;
+    }
+    
     .position-row .value-cell-group {
+        display: block;
+        padding-top: 10px;
+        margin-top: 4px;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .position-row .value-cell-group .money-cell {
+        font-size: 16px;
+        font-weight: 600;
+        margin-right: 8px;
+    }
+    
+    .position-row .pnl-text {
         font-size: 13px;
     }
     
     .pos-actions {
-        order: 10;
-        margin-top: 8px;
-        padding-top: 8px;
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
         border-top: 1px solid var(--border-color);
     }
     
     .btn-sell {
         flex: 1;
-        padding: 8px 12px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    
+    .btn-share {
+        width: 40px;
+        height: 40px;
+    }
+    
+    /* Totals row mobile */
+    .totals-row {
+        padding: 14px;
+    }
+    
+    .totals-row .cell-market {
+        margin-bottom: 8px;
     }
     
     /* Date Picker Modal - Mobile */
