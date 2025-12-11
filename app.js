@@ -339,14 +339,25 @@ async function getTrades(address, offset) {
                     };
                 });
                 
+                // 去重：如果activities里已经有相同conditionId且类型为REDEEM/CLAIM/LOST的记录，则不添加
+                // 另外，lostOrders本身也可能包含重复的conditionId（如果API返回了重复数据），虽然不太可能，但最好也处理一下
+                const existingConditionIds = new Set(
+                    activities
+                        .filter(a => a.conditionId && (a.type === 'REDEEM' || a.type === 'CLAIM' || a.type === 'LOST'))
+                        .map(a => a.conditionId)
+                );
+                
+                // 过滤掉已经存在的记录
+                const uniqueLostOrders = lostOrders.filter(o => !existingConditionIds.has(o.conditionId));
+                
                 // 日期过滤（如果设置了）
                 if (dpState.startDate && dpState.endDate) {
                     const startTime = Math.floor(dpState.startDate.getTime() / 1000);
                     const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399;
-                    const filteredLost = lostOrders.filter(o => o.timestamp >= startTime && o.timestamp <= endTime);
+                    const filteredLost = uniqueLostOrders.filter(o => o.timestamp >= startTime && o.timestamp <= endTime);
                     activities = [...activities, ...filteredLost];
                 } else {
-                    activities = [...activities, ...lostOrders];
+                    activities = [...activities, ...uniqueLostOrders];
                 }
                 
                 // 按时间排序（最新的在前）
