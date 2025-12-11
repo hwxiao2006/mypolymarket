@@ -255,10 +255,22 @@ async function getTrades(address, offset) {
             const closedResp = await fetch(closedUrl);
             if (closedResp.ok) {
                 const closedPositions = await closedResp.json();
-                console.log("Closed positions:", closedPositions);
+                console.log("Closed positions full data:", closedPositions);
+                // 打印每个closed position的关键字段
+                closedPositions.forEach((p, i) => {
+                    console.log(`Position ${i}:`, {
+                        title: p.title,
+                        curPrice: p.curPrice,
+                        price: p.price,
+                        outcome: p.outcome,
+                        size: p.size,
+                        resolved: p.resolved
+                    });
+                });
                 // 找出输的订单（curPrice接近0且已结算）
                 const lostOrders = closedPositions.filter(p => {
-                    const curPrice = parseFloat(p.curPrice || 0);
+                    const curPrice = parseFloat(p.curPrice || p.price || 0);
+                    console.log(`Checking ${p.title}: curPrice=${curPrice}`);
                     return curPrice < 0.01; // 价格接近0表示输了
                 }).map(p => ({
                     type: 'LOST',
