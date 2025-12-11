@@ -240,29 +240,117 @@ async function getTrades(address, offset) {
     
     let activities = await response.json();
     
-    // 首次加载时获取closed-positions补充输的订单
+    // 首次加载时补充REDEEM的outcome信息和获取LOST记录
     if (offset === 0) {
+        // 先从activity数据本身创建conditionId到outcome的映射（从TRADE记录）
+        const tradeOutcomeMap = {};
+        activities.forEach(a => {
+            if (a.type === 'TRADE' && a.outcome && a.conditionId) {
+                tradeOutcomeMap[a.conditionId] = {
+                    outcome: a.outcome,
+                    price: a.price
+                };
+            }
+        });
+        
+        // 找出需要补充outcome的REDEEM记录的conditionId
+        const missingOutcomeIds = activities
+            .filter(a => (a.type === 'REDEEM' || a.type === 'CLAIM') && !a.outcome && a.conditionId)
+            .filter(a => !tradeOutcomeMap[a.conditionId])
+            .map(a => a.conditionId);
+        
+        // 如果有缺失的outcome，获取更多历史activity来查找
+        if (missingOutcomeIds.length > 0) {
+            try {
+                const historyUrl = `${API_BASE}/activity?user=${address}&limit=200`;
+                const historyResp = await fetch(historyUrl);
+                if (historyResp.ok) {
+                    const historyData = await historyResp.json();
+                    historyData.forEach(a => {
+                        if (a.type === 'TRADE' && a.outcome && a.conditionId && missingOutcomeIds.includes(a.conditionId)) {
+                            tradeOutcomeMap[a.conditionId] = {
+                                outcome: a.outcome,
+                                price: a.price
+                            };
+                        }
+                    });
+                }
+            } catch (e) {}
+        }
+        
+        // 补充REDEEM记录的outcome信息
+        activities.forEach(a => {
+            if ((a.type === 'REDEEM' || a.type === 'CLAIM') && !a.outcome && a.conditionId) {
+                const trade = tradeOutcomeMap[a.conditionId];
+                if (trade) {
+                    a.outcome = trade.outcome;
+                    a.price = trade.price || a.price;
+                }
+            }
+        });
+        
         try {
-            let closedUrl = `${API_BASE}/closed-positions?user=${address}&limit=100`;
+            let closedUrl = `${API_BASE}/closed-positions?user=${address}&limit=100&sortBy=REALIZEDPNL&sortDirection=ASC`;
             const closedResp = await fetch(closedUrl);
             if (closedResp.ok) {
                 const closedPositions = await closedResp.json();
-                // realizedPnl为负数表示输了
+                
+                // 对于还没有outcome的REDEEM，尝试从closed-positions获取
+                const positionMap = {};
+                closedPositions.forEach(p => {
+                    positionMap[p.conditionId] = {
+                        outcome: p.outcome,
+                        avgPrice: p.avgPrice
+                    };
+                });
+                
+                activities.forEach(a => {
+                    if ((a.type === 'REDEEM' || a.type === 'CLAIM') && !a.outcome && a.conditionId) {
+                        const pos = positionMap[a.conditionId];
+                        if (pos) {
+                            a.outcome = pos.outcome;
+                            a.price = pos.avgPrice || a.price;
+                        }
+                    }
+                });
+                
+                // realizedPnl为负数表示输了，添加LOST记录
                 const lostOrders = closedPositions.filter(p => {
                     const pnl = parseFloat(p.realizedPnl || 0);
                     return pnl < 0;
-                }).map(p => ({
-                    type: 'LOST',
-                    title: p.title || 'Unknown Market',
-                    icon: p.icon,
-                    eventSlug: p.eventSlug || p.slug,
-                    outcome: p.outcome,
-                    size: p.totalBought || 0,
-                    usdcSize: Math.abs(p.realizedPnl || 0),
-                    price: p.avgPrice || 0,
-                    timestamp: p.timestamp || Date.now() / 1000
-                }));
-                activities = [...activities, ...lostOrders];
+                }).map(p => {
+                    let ts = Math.floor(Date.now() / 1000);
+                    if (p.endDate) {
+                        const d = new Date(p.endDate);
+                        ts = Math.floor(d.getTime() / 1000);
+                    }
+                    
+                    return {
+                        type: 'LOST',
+                        title: p.title || 'Unknown Market',
+                        icon: p.icon,
+                        eventSlug: p.eventSlug || p.slug,
+                        outcome: p.outcome,
+                        size: p.totalBought || 0,
+                        usdcSize: Math.abs(p.realizedPnl || 0),
+                        price: p.avgPrice || 0,
+                        timestamp: ts,
+                        conditionId: p.conditionId
+                    };
+                });
+                
+                // 日期过滤（如果设置了）
+                if (dpState.startDate && dpState.endDate) {
+                    const startTime = Math.floor(dpState.startDate.getTime() / 1000);
+                    const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399;
+                    const filteredLost = lostOrders.filter(o => o.timestamp >= startTime && o.timestamp <= endTime);
+                    activities = [...activities, ...filteredLost];
+                } else {
+                    activities = [...activities, ...lostOrders];
+                }
+                
+                // 按时间排序（最新的在前）
+                activities.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             }
         } catch (e) {
             // 静默处理错误
@@ -305,12 +393,23 @@ function createTradeElement(trade) {
     switch(activityType) {
         case 'TRADE':
             const isBuy = trade.side === 'BUY';
-            activityLabel = isBuy ? 'Bought' : 'Sold';
-            isPositiveValue = !isBuy;
-            if (isBuy) {
+            const tradePrice = parseFloat(trade.price || 0);
+            // 如果是SELL且价格接近0（<0.05），视为"输"了（止损卖出）
+            const isLostSell = !isBuy && tradePrice < 0.05;
+            
+            if (isLostSell) {
+                activityLabel = 'Lost';
+                isPositiveValue = false;
+                activityIconClass = 'icon-lost';
+                activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+            } else if (isBuy) {
+                activityLabel = 'Bought';
+                isPositiveValue = false;
                 activityIconClass = 'icon-bought';
                 activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
             } else {
+                activityLabel = 'Sold';
+                isPositiveValue = true;
                 activityIconClass = 'icon-sold';
                 activityIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
             }
@@ -380,13 +479,16 @@ function createTradeElement(trade) {
     const iconSrc = trade.icon || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="%23f3f4f6" width="40" height="40"/></svg>';
 
     // Outcome Badge
-    const outcomeText = trade.outcome || 'N/A';
+    const outcomeText = trade.outcome || '';
     const outcomeClass = outcomeText.toLowerCase() === 'yes' ? 'badge-yes' : 'badge-no';
     
     // Shares & Price
     const shares = (trade.size || trade.usdcSize || 0).toFixed(1);
     const price = trade.price || 0;
     const priceCents = (price * 100).toFixed(0);
+    
+    // 只有当有outcome时才显示badge
+    const showOutcomeBadge = !!outcomeText;
 
     // --- Value Logic ---
     let rawValue;
@@ -416,7 +518,7 @@ function createTradeElement(trade) {
             <div class="market-content">
                 <a href="${escapeHtml(marketUrl)}" class="market-title" target="_blank">${escapeHtml(marketTitle)}</a>
                 <div class="market-sub">
-                    <span class="outcome-badge ${outcomeClass}">${escapeHtml(outcomeText)} ${priceCents}¢</span>
+                    ${showOutcomeBadge ? `<span class="outcome-badge ${outcomeClass}">${escapeHtml(outcomeText)} ${priceCents}¢</span>` : ''}
                     <span>${shares} shares</span>
                 </div>
             </div>
