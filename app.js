@@ -219,13 +219,11 @@ async function loadMoreTrades() {
 }
 
 async function getTrades(address, offset) {
-    // 始终使用/activity端点获取所有类型的活动记录
     const params = new URLSearchParams();
     params.append('user', address);
     params.append('limit', LIMIT);
     params.append('offset', offset);
     
-    // 如果有日期范围，添加时间参数
     if (dpState.startDate && dpState.endDate) {
         const startTime = Math.floor(dpState.startDate.getTime() / 1000);
         const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399;
@@ -234,128 +232,25 @@ async function getTrades(address, offset) {
     }
     
     const url = `${API_BASE}/activity?${params.toString()}`;
-    
-    console.log("Fetching trades from URL:", url); // 调试信息
-    
     const response = await fetch(url);
     
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error Response:", errorText);
-        throw new Error(`API returned ${response.status}: ${errorText}`);
+        throw new Error(`API returned ${response.status}`);
     }
     
     let activities = await response.json();
     
-    // 在activity中搜索COL vs NSH订单
-    const colNshInActivity = activities.filter(a => 
-        (a.title && (a.title.toLowerCase().includes('nashville') || a.title.toLowerCase().includes('predators'))) ||
-        (a.eventSlug && a.eventSlug.includes('col-nsh'))
-    );
-    console.log("=== COL vs NSH in ACTIVITY ===", colNshInActivity);
-    
-    // 使用Subgraph查询用户positions（包括已结算的输的订单）
-    console.log("Offset value:", offset);
+    // 首次加载时获取closed-positions补充输的订单
     if (offset === 0) {
         try {
-            const SUBGRAPH_URL = 'https://api.thegraph.com/subgraphs/name/polymarket/polymarket-matic';
-            const query = `{
-                userPositions(where: {user: "${address.toLowerCase()}"}, first: 100) {
-                    id
-                    user
-                    market {
-                        id
-                        question
-                        resolution
-                        resolutionTimestamp
-                    }
-                    outcome
-                    shares
-                    avgPrice
-                }
-            }`;
-            console.log("Querying Subgraph...");
-            const subgraphResp = await fetch(SUBGRAPH_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query })
-            });
-            console.log("Subgraph response status:", subgraphResp.status);
-            if (subgraphResp.ok) {
-                const data = await subgraphResp.json();
-                console.log("Subgraph data:", data);
-                if (data.data && data.data.userPositions) {
-                    // 找出已结算且持仓方向与resolution不符的订单（输的）
-                    const lostPositions = data.data.userPositions.filter(p => {
-                        if (!p.market.resolution) return false;
-                        const resolution = p.market.resolution;
-                        const outcome = p.outcome;
-                        // resolution是赢的outcome，如果用户持有的不是这个outcome就输了
-                        return resolution !== outcome;
-                    }).map(p => ({
-                        type: 'LOST',
-                        title: p.market.question || 'Unknown Market',
-                        outcome: p.outcome,
-                        size: parseFloat(p.shares || 0),
-                        usdcSize: parseFloat(p.shares || 0) * parseFloat(p.avgPrice || 0),
-                        price: parseFloat(p.avgPrice || 0),
-                        timestamp: parseInt(p.market.resolutionTimestamp || 0)
-                    }));
-                    console.log("Lost positions from Subgraph:", lostPositions);
-                    activities = [...activities, ...lostPositions];
-                }
-            }
-        } catch (e) {
-            console.log("Failed to query Subgraph:", e);
-        }
-    }
-    
-    // 获取closed-positions来补充输的订单
-    if (offset === 0) {
-        console.log("Fetching closed positions..."); // 调试
-        try {
-            let closedUrl = `${API_BASE}/closed-positions?user=${address}&limit=${LIMIT}`;
-            // 添加日期范围参数
-            if (dpState.startDate && dpState.endDate) {
-                const startTime = Math.floor(dpState.startDate.getTime() / 1000);
-                const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399;
-                closedUrl += `&start=${startTime}&end=${endTime}`;
-            }
-            console.log("Closed positions URL:", closedUrl);
+            let closedUrl = `${API_BASE}/closed-positions?user=${address}&limit=100`;
             const closedResp = await fetch(closedUrl);
-            console.log("Closed positions response status:", closedResp.status);
             if (closedResp.ok) {
                 const closedPositions = await closedResp.json();
-                console.log("Closed positions:", closedPositions);
-                // 打印第一条记录的所有字段
-                if (closedPositions.length > 0) {
-                    const p = closedPositions[0];
-                    console.log("First position keys:", Object.keys(p));
-                    console.log("First position data:", p);
-                }
-                // 查找特定订单 nhl-col-nsh-2025-12-10
-                const targetOrder = closedPositions.find(p => 
-                    (p.slug && p.slug.includes('col-nsh')) || 
-                    (p.eventSlug && p.eventSlug.includes('col-nsh')) ||
-                    (p.title && p.title.toLowerCase().includes('nashville'))
-                );
-                if (targetOrder) {
-                    console.log("=== TARGET ORDER (COL vs NSH) FOUND ===");
-                    console.log("Full data:", targetOrder);
-                } else {
-                    console.log("=== TARGET ORDER (COL vs NSH) NOT FOUND ===");
-                    // 打印所有包含12-10日期的订单
-                    const dec10Orders = closedPositions.filter(p => 
-                        (p.slug && p.slug.includes('12-10')) ||
-                        (p.eventSlug && p.eventSlug.includes('12-10'))
-                    );
-                    console.log("Orders from Dec 10:", dec10Orders);
-                }
-                // 找出输的订单 - realizedPnl为负数表示输了
+                // realizedPnl为负数表示输了
                 const lostOrders = closedPositions.filter(p => {
                     const pnl = parseFloat(p.realizedPnl || 0);
-                    console.log(`Checking: realizedPnl=${pnl}, curPrice=${p.curPrice}, title=${p.title}`);
-                    return pnl < 0; // realizedPnl为负表示输了
+                    return pnl < 0;
                 }).map(p => ({
                     type: 'LOST',
                     title: p.title || 'Unknown Market',
@@ -363,16 +258,14 @@ async function getTrades(address, offset) {
                     eventSlug: p.eventSlug || p.slug,
                     outcome: p.outcome,
                     size: p.totalBought || 0,
-                    usdcSize: Math.abs(p.realizedPnl || p.totalBought * p.avgPrice || 0), // 亏损金额
+                    usdcSize: Math.abs(p.realizedPnl || 0),
                     price: p.avgPrice || 0,
-                    realizedPnl: p.realizedPnl,
-                    timestamp: p.timestamp || (p.endDate ? Math.floor(new Date(p.endDate).getTime() / 1000) : Date.now() / 1000)
+                    timestamp: p.timestamp || Date.now() / 1000
                 }));
-                console.log("Lost orders:", lostOrders);
                 activities = [...activities, ...lostOrders];
             }
         } catch (e) {
-            console.log("Failed to fetch closed positions:", e);
+            // 静默处理错误
         }
     }
     
@@ -385,14 +278,6 @@ function renderTrades(trades, append) {
     if (!append) {
         container.innerHTML = '';
     }
-    
-    console.log("Rendering trades:", trades); // 调试信息
-    // 打印所有活动类型用于调试
-    const types = [...new Set(trades.map(t => t.type))];
-    console.log("Activity types found:", types);
-    // 打印REDEEM记录的usdcSize用于调试
-    const redeems = trades.filter(t => t.type === 'REDEEM');
-    console.log("REDEEM records:", redeems.map(r => ({ title: r.title, usdcSize: r.usdcSize })));
     
     if (trades.length === 0 && !append) {
         container.innerHTML = '<div class="empty-state">No trades found for this address</div>';
