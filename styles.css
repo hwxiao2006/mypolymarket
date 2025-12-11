@@ -704,6 +704,12 @@ body {
 @media (max-width: 600px) {
     .main-container {
         padding: 12px;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    
+    body {
+        overflow-x: hidden;
     }
     
     /* Tabs */
@@ -756,6 +762,8 @@ body {
         flex-direction: column;
         gap: 8px;
         padding: 12px;
+        grid-template-columns: none;
+        width: 100%;
     }
     
     .cell-activity {
@@ -774,6 +782,17 @@ body {
     
     .market-title {
         font-size: 13px;
+        white-space: normal;
+        word-break: break-word;
+    }
+    
+    .cell-market {
+        max-width: 100%;
+        overflow: hidden;
+    }
+    
+    .market-content {
+        max-width: calc(100% - 40px);
     }
     
     .market-sub {
@@ -804,6 +823,8 @@ body {
         flex-direction: column;
         gap: 8px;
         padding: 12px;
+        grid-template-columns: none;
+        width: 100%;
     }
     
     .position-row .cell-market {
