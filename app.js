@@ -59,8 +59,14 @@ async function fetchPositions(address) {
         // 判断条件：
         // 1. 持仓数量大于0
         const size = parseFloat(position.size || 0);
+        // 2. 当前价值大于0 (过滤掉已归零/输掉的持仓)
+        const currentValue = parseFloat(position.currentValue || 0);
+        const curPrice = parseFloat(position.curPrice || position.currentPrice || 0);
         
-        return size > 0;
+        // 如果当前价值非常小（接近0），且可赎回或价格为0，则认为是已关闭且输掉的持仓
+        const isZeroValue = currentValue < 0.01 || curPrice < 0.001;
+        
+        return size > 0 && !isZeroValue;
     });
     
     console.log("Open positions:", openPositions);
