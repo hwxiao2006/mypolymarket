@@ -252,7 +252,13 @@ async function getTrades(address, offset) {
     if (offset === 0) {
         console.log("Fetching closed positions..."); // 调试
         try {
-            const closedUrl = `${API_BASE}/closed-positions?user=${address}&limit=${LIMIT}`;
+            let closedUrl = `${API_BASE}/closed-positions?user=${address}&limit=${LIMIT}`;
+            // 添加日期范围参数
+            if (dpState.startDate && dpState.endDate) {
+                const startTime = Math.floor(dpState.startDate.getTime() / 1000);
+                const endTime = Math.floor(dpState.endDate.getTime() / 1000) + 86399;
+                closedUrl += `&start=${startTime}&end=${endTime}`;
+            }
             console.log("Closed positions URL:", closedUrl);
             const closedResp = await fetch(closedUrl);
             console.log("Closed positions response status:", closedResp.status);
