@@ -40,7 +40,8 @@ async function handleSearch() {
 
 async function fetchPositions(address) {
     // Note: Endpoint might be different, trying common pattern
-    const url = `${API_BASE}/positions?user=${address}`; 
+    // Removed specific limit to fetch all positions if possible, or use a larger limit
+    const url = `${API_BASE}/positions?user=${address}&limit=100`; 
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -57,13 +58,9 @@ async function fetchPositions(address) {
     const openPositions = positions.filter(position => {
         // 判断条件：
         // 1. 持仓数量大于0
-        // 2. 当前价值大于0（可选）
-        // 3. 如果有endDate字段，且未过期
-        const now = new Date();
-        const endDate = position.endDate ? new Date(position.endDate) : null;
-        const isExpired = endDate && endDate < now;
+        const size = parseFloat(position.size || 0);
         
-        return position.size > 0 && !isExpired;
+        return size > 0;
     });
     
     console.log("Open positions:", openPositions);
