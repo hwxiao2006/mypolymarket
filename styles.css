@@ -921,11 +921,76 @@ html {
     
     /* Totals row mobile */
     .totals-row {
-        padding: 14px;
+        padding: 16px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 8px;
+        margin: 12px 0;
+        border: 1px solid var(--border-color);
     }
     
     .totals-row .cell-market {
-        margin-bottom: 8px;
+        margin-bottom: 16px;
+    }
+    
+    .totals-row .totals-label {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .totals-row .price-change-cell {
+        display: none;
+    }
+    
+    .totals-row .money-cell {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        margin-right: 20px;
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+    
+    .totals-row .money-cell::before {
+        font-size: 11px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+    
+    .totals-row .money-cell:nth-of-type(2)::before {
+        content: 'Total Bet';
+    }
+    
+    .totals-row .money-cell:nth-of-type(3)::before {
+        content: 'To Win';
+    }
+    
+    .totals-row .value-cell-group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 12px;
+        margin-top: 4px;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .totals-row .value-cell-group .money-cell {
+        margin: 0;
+        flex-direction: column;
+    }
+    
+    .totals-row .value-cell-group .money-cell::before {
+        content: 'Value';
+    }
+    
+    .totals-row .pnl-text {
+        font-size: 15px;
+        font-weight: 600;
+    }
+    
+    .totals-row .pos-actions {
+        display: none;
     }
     
     /* Date Picker Modal - Mobile */
