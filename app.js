@@ -343,7 +343,23 @@ async function getTrades(address, offset) {
                 // 另外，lostOrders本身也可能包含重复的conditionId（如果API返回了重复数据），虽然不太可能，但最好也处理一下
                 const existingConditionIds = new Set(
                     activities
-                        .filter(a => a.conditionId && (a.type === 'REDEEM' || a.type === 'CLAIM' || a.type === 'LOST'))
+                        .filter(a => {
+                            if (!a.conditionId) return false;
+                            
+                            // 1. Explicit types that imply a closed/lost position
+                            if (a.type === 'REDEEM' || a.type === 'CLAIM' || a.type === 'LOST') return true;
+                            
+                            // 2. "Lost Sell" TRADES (Visualized as "Lost")
+                            // 如果有任何SELL操作，我们认为该位置已经有交易记录，不再从closed-positions合成LOST
+                            // 这避免了 "Lost Sell" (TRADE) 和 "Lost" (closed-positions) 同时出现
+                            if (a.type === 'TRADE') {
+                                const isBuy = a.side === 'BUY';
+                                // 只要是卖出（即使是止损卖出），或者是价格很低的卖出
+                                if (!isBuy) return true;
+                            }
+                            
+                            return false;
+                        })
                         .map(a => a.conditionId)
                 );
                 
