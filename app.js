@@ -265,22 +265,22 @@ async function getTrades(address, offset) {
                     console.log("First position keys:", Object.keys(p));
                     console.log("First position data:", p);
                 }
-                // 找出输的订单 - 需要判断cashPnl或realizedPnl为负数
+                // 找出输的订单 - curPrice接近0表示输了
                 const lostOrders = closedPositions.filter(p => {
-                    const pnl = parseFloat(p.cashPnl || p.realizedPnl || p.pnl || 0);
                     const curPrice = parseFloat(p.curPrice || 0);
-                    console.log(`Checking: pnl=${pnl}, curPrice=${curPrice}, title=${p.title}`);
-                    return pnl < 0; // PnL为负表示输了
+                    console.log(`Checking: curPrice=${curPrice}, realizedPnl=${p.realizedPnl}, title=${p.title}`);
+                    return curPrice < 0.01; // curPrice接近0表示输了
                 }).map(p => ({
                     type: 'LOST',
                     title: p.title || 'Unknown Market',
                     icon: p.icon,
                     eventSlug: p.eventSlug || p.slug,
                     outcome: p.outcome,
-                    size: p.size,
-                    usdcSize: 0, // 输了没有收益
+                    size: p.totalBought || 0,
+                    usdcSize: 0,
                     price: 0,
-                    timestamp: p.endDate ? Math.floor(new Date(p.endDate).getTime() / 1000) : Date.now() / 1000
+                    avgPrice: p.avgPrice, // 保存买入均价用于计算亏损
+                    timestamp: p.timestamp || (p.endDate ? Math.floor(new Date(p.endDate).getTime() / 1000) : Date.now() / 1000)
                 }));
                 console.log("Lost orders:", lostOrders);
                 activities = [...activities, ...lostOrders];
