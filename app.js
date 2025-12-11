@@ -248,11 +248,14 @@ async function getTrades(address, offset) {
     let activities = await response.json();
     
     // 获取closed-positions来补充输的订单
+    console.log("Offset value:", offset); // 调试
     if (offset === 0) {
+        console.log("Fetching closed positions..."); // 调试
         try {
             const closedUrl = `${API_BASE}/closed-positions?user=${address}&limit=${LIMIT}`;
-            console.log("Fetching closed positions from:", closedUrl);
+            console.log("Closed positions URL:", closedUrl);
             const closedResp = await fetch(closedUrl);
+            console.log("Closed positions response status:", closedResp.status);
             if (closedResp.ok) {
                 const closedPositions = await closedResp.json();
                 console.log("Closed positions count:", closedPositions.length);
