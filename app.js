@@ -258,16 +258,19 @@ async function getTrades(address, offset) {
             console.log("Closed positions response status:", closedResp.status);
             if (closedResp.ok) {
                 const closedPositions = await closedResp.json();
-                console.log("Closed positions count:", closedPositions.length);
+                console.log("Closed positions:", closedPositions);
                 // 打印第一条记录的所有字段
                 if (closedPositions.length > 0) {
-                    console.log("First closed position ALL fields:", JSON.stringify(closedPositions[0], null, 2));
+                    const p = closedPositions[0];
+                    console.log("First position keys:", Object.keys(p));
+                    console.log("First position data:", p);
                 }
-                // 找出输的订单（curPrice接近0且已结算）
+                // 找出输的订单 - 需要判断cashPnl或realizedPnl为负数
                 const lostOrders = closedPositions.filter(p => {
-                    const curPrice = parseFloat(p.curPrice || p.price || 0);
-                    console.log(`Checking ${p.title}: curPrice=${curPrice}`);
-                    return curPrice < 0.01; // 价格接近0表示输了
+                    const pnl = parseFloat(p.cashPnl || p.realizedPnl || p.pnl || 0);
+                    const curPrice = parseFloat(p.curPrice || 0);
+                    console.log(`Checking: pnl=${pnl}, curPrice=${curPrice}, title=${p.title}`);
+                    return pnl < 0; // PnL为负表示输了
                 }).map(p => ({
                     type: 'LOST',
                     title: p.title || 'Unknown Market',
