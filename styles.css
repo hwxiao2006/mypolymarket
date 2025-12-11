@@ -770,63 +770,83 @@ html {
     
     /* Trade Row - Mobile Card Style */
     .trade-row {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        padding: 12px;
-        grid-template-columns: none;
-        width: 100%;
+        display: block;
+        padding: 14px;
+        position: relative;
     }
     
+    /* Activity - top right corner */
     .cell-activity {
-        order: 1;
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        flex-direction: row-reverse;
+        gap: 6px;
     }
     
+    .activity-icon-wrapper {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .activity-label {
+        font-size: 12px;
+    }
+    
+    /* Market - left side with padding for activity */
     .cell-market {
-        order: 2;
-        padding-right: 0;
+        padding-right: 70px;
+        margin-bottom: 10px;
     }
     
     .market-icon {
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+    }
+    
+    .market-content {
+        flex: 1;
+        min-width: 0;
     }
     
     .market-title {
         font-size: 13px;
+        line-height: 1.4;
+        margin-bottom: 4px;
         white-space: normal;
         word-break: break-word;
     }
     
-    .cell-market {
-        max-width: 100%;
-        overflow: hidden;
-    }
-    
-    .market-content {
-        max-width: calc(100% - 40px);
-    }
-    
     .market-sub {
-        font-size: 12px;
+        font-size: 11px;
         flex-wrap: wrap;
+        gap: 6px;
     }
     
+    .outcome-badge {
+        font-size: 10px;
+        padding: 2px 5px;
+    }
+    
+    /* Value - bottom row */
     .cell-value {
-        order: 3;
+        display: flex;
         justify-content: space-between;
-        padding-top: 8px;
+        align-items: center;
+        padding-top: 10px;
+        margin-top: 10px;
         border-top: 1px solid var(--border-color);
-        margin-top: 4px;
     }
     
     .value-amount {
         font-size: 14px;
+        font-weight: 600;
     }
     
     .time-ago {
-        font-size: 12px;
-        min-width: auto;
+        font-size: 11px;
+        color: var(--text-secondary);
     }
     
     /* Position Row - Mobile Card Style */
