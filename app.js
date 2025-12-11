@@ -273,15 +273,21 @@ async function getTrades(address, offset) {
                 }
                 // 查找特定订单 nhl-col-nsh-2025-12-10
                 const targetOrder = closedPositions.find(p => 
-                    p.slug && p.slug.includes('col-nsh') || 
-                    p.eventSlug && p.eventSlug.includes('col-nsh') ||
-                    p.title && p.title.toLowerCase().includes('avalanche')
+                    (p.slug && p.slug.includes('col-nsh')) || 
+                    (p.eventSlug && p.eventSlug.includes('col-nsh')) ||
+                    (p.title && p.title.toLowerCase().includes('nashville'))
                 );
                 if (targetOrder) {
-                    console.log("=== TARGET ORDER (Avalanche) FOUND ===");
+                    console.log("=== TARGET ORDER (COL vs NSH) FOUND ===");
                     console.log("Full data:", targetOrder);
                 } else {
-                    console.log("=== TARGET ORDER NOT FOUND in closed positions ===");
+                    console.log("=== TARGET ORDER (COL vs NSH) NOT FOUND ===");
+                    // 打印所有包含12-10日期的订单
+                    const dec10Orders = closedPositions.filter(p => 
+                        (p.slug && p.slug.includes('12-10')) ||
+                        (p.eventSlug && p.eventSlug.includes('12-10'))
+                    );
+                    console.log("Orders from Dec 10:", dec10Orders);
                 }
                 // 找出输的订单 - curPrice接近0表示输了
                 const lostOrders = closedPositions.filter(p => {
