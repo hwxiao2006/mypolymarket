@@ -150,7 +150,11 @@ function createPositionElement(pos) {
     const pnlSign = pnl >= 0 ? '+' : '-';
     
     const iconSrc = pos.icon || pos.image || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect fill="%23f3f4f6" width="40" height="40"/></svg>';
-    const marketUrl = pos.slug ? `https://polymarket.com/event/${pos.slug}` : '#';
+    
+    // 优先使用 eventSlug，因为 slug 可能是市场的 slug，而 URL 通常需要 event slug
+    const marketUrl = pos.eventSlug 
+        ? `https://polymarket.com/event/${pos.eventSlug}` 
+        : (pos.slug ? `https://polymarket.com/event/${pos.slug}` : '#');
 
     div.innerHTML = `
         <div class="cell-market">
