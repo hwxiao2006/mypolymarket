@@ -24,12 +24,15 @@ async function handleSearch() {
 
     try {
         if (activeTab === 'positions') {
+            document.getElementById('accountSummary').style.display = 'flex';
             await fetchPositions(address);
         } else if (activeTab === 'history') {
+            document.getElementById('accountSummary').style.display = 'none';
             currentOffset = 0;
             await fetchTrades(address);
         } else {
             // Open orders
+            document.getElementById('accountSummary').style.display = 'none';
             showLoading(false);
         }
     } catch (error) {
@@ -39,16 +42,26 @@ async function handleSearch() {
 }
 
 async function fetchPositions(address) {
-    // Note: Endpoint might be different, trying common pattern
-    // Removed specific limit to fetch all positions if possible, or use a larger limit
-    const url = `${API_BASE}/positions?user=${address}&limit=100`; 
-    const response = await fetch(url);
+    // Parallel fetch for positions and portfolio value
+    const [positionsResp, portfolioResp] = await Promise.all([
+        fetch(`${API_BASE}/positions?user=${address}&limit=100`),
+        fetch(`${API_BASE}/value?user=${address}`)
+    ]);
     
-    if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+    if (!positionsResp.ok) {
+        throw new Error(`Positions API returned ${positionsResp.status}`);
     }
     
-    const positions = await response.json();
+    const positions = await positionsResp.json();
+    
+    let portfolioValue = 0;
+    if (portfolioResp.ok) {
+        // Response format: [{"user":"0x...","value":129.98}]
+        const portfolioData = await portfolioResp.json();
+        if (Array.isArray(portfolioData) && portfolioData.length > 0) {
+            portfolioValue = portfolioData[0].value || 0;
+        }
+    }
     
     // 打印详细的数据结构信息用于调试
     console.log("Full positions data:", positions);
@@ -70,23 +83,18 @@ async function fetchPositions(address) {
     });
     
     console.log("Open positions:", openPositions);
-    renderPositions(openPositions);
+    renderPositions(openPositions, portfolioValue);
     showLoading(false);
 }
 
-function renderPositions(positions) {
+function renderPositions(positions, portfolioValue = 0) {
     const container = document.getElementById('positionsContainer');
     container.innerHTML = '';
     
-    if (!positions || positions.length === 0) {
-        container.innerHTML = '<div class="empty-state">No open positions found</div>';
-        return;
-    }
-    
-    // Calculate totals
+    // Calculate totals from positions
     let totalBet = 0;
     let totalToWin = 0;
-    let totalValue = 0;
+    let totalPositionValue = 0;
     
     positions.forEach(pos => {
         const size = parseFloat(pos.size || 0);
@@ -95,14 +103,32 @@ function renderPositions(positions) {
         
         totalBet += size * avgPrice;
         totalToWin += size;
-        totalValue += size * currentPrice;
+        totalPositionValue += size * currentPrice;
         
         const el = createPositionElement(pos);
         container.appendChild(el);
     });
     
+    // Calculate Cash
+    // Cash = Portfolio Value - Total Position Value
+    // Note: API Portfolio Value might be slightly different from our calculated Total Position Value due to price updates/rounding
+    // But it's the best proxy we have.
+    const cash = Math.max(0, portfolioValue - totalPositionValue);
+    
+    // Update Account Summary
+    document.getElementById('val-portfolio').textContent = `$${portfolioValue.toFixed(2)}`;
+    document.getElementById('val-cash').textContent = `$${cash.toFixed(2)}`;
+    document.getElementById('val-positions').textContent = `$${totalPositionValue.toFixed(2)}`;
+    
+    if (!positions || positions.length === 0) {
+        container.innerHTML = '<div class="empty-state">No open positions found</div>';
+        return;
+    }
+    
     // Add totals row
-    const totalPnl = totalValue - totalBet;
+    
+    // Add totals row
+    const totalPnl = totalPositionValue - totalBet;
     const totalPnlPercent = totalBet > 0 ? (totalPnl / totalBet) * 100 : 0;
     const pnlClass = totalPnl >= 0 ? 'pnl-pos' : 'pnl-neg';
     const pnlSign = totalPnl >= 0 ? '+' : '-';
@@ -119,7 +145,7 @@ function renderPositions(positions) {
         <div class="money-cell totals-value cell-total-bet">$${totalBet.toFixed(2)}</div>
         <div class="money-cell totals-value cell-total-towin">$${totalToWin.toFixed(2)}</div>
         <div class="value-cell-group">
-            <div class="money-cell totals-value">$${totalValue.toFixed(2)}</div>
+            <div class="money-cell totals-value">$${totalPositionValue.toFixed(2)}</div>
             <div class="pnl-text ${pnlClass}">${pnlSign}$${Math.abs(totalPnl).toFixed(2)} (${Math.abs(totalPnlPercent).toFixed(2)}%)</div>
         </div>
         <div class="pos-actions"></div>

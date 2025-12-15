@@ -11,17 +11,24 @@
     <div class="main-container">
         <!-- Top Control Bar -->
         <div class="controls-bar">
-            <!-- Search is now global or per tab? Screenshot shows search under tabs usually, but user screenshot shows search bar. 
-                 The screenshot provided for "Positions" has tabs AT THE TOP, then search bar. 
-                 My current layout has search bar at top. I will keep search bar at top for now or move it? 
-                 The screenshot shows: Tabs (Positions, Open orders, History) -> Search Bar -> Filter Bar (for history?) -> Table.
-                 Wait, the screenshot for Positions shows: Tabs -> Search Bar -> Table.
-                 The screenshot for Activity (History) shows: Search Bar -> Filters -> Table.
-                 
-                 Let's place Tabs ABOVE the Search Bar.
-            -->
         </div>
         
+        <!-- Account Summary Section -->
+        <div id="accountSummary" class="account-summary" style="display: none;">
+            <div class="summary-card">
+                <div class="summary-label">Portfolio Value</div>
+                <div class="summary-value" id="val-portfolio">$0.00</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Cash</div>
+                <div class="summary-value" id="val-cash">$0.00</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Positions Value</div>
+                <div class="summary-value" id="val-positions">$0.00</div>
+            </div>
+        </div>
+
         <div class="tabs-nav">
             <button class="nav-tab active" data-tab="positions">Positions</button>
             <button class="nav-tab" data-tab="openOrders">Open orders</button>

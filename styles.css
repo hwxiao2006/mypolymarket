@@ -111,6 +111,67 @@ html {
     color: var(--text-primary);
 }
 
+/* Account Summary */
+.account-summary {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.summary-card {
+    flex: 1;
+    background: white;
+    padding: 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.summary-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.summary-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Mobile Account Summary */
+@media (max-width: 600px) {
+    .account-summary {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .summary-card {
+        padding: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .summary-label {
+        margin-bottom: 0;
+        font-size: 14px;
+    }
+    
+    .summary-value {
+        font-size: 18px;
+    }
+}
+
 /* Tabs Navigation */
 .tabs-nav {
     display: flex;
