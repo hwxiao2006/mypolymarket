@@ -42,19 +42,17 @@ async function handleSearch() {
 }
 
 async function fetchPositions(address) {
-    // Parallel fetch for positions and portfolio value
-    // We need to fetch ALL positions to calculate accurate totals and cash balance
-    // Start with the portfolio value and the first batch of positions
-    const [portfolioResp, firstBatchPositions] = await Promise.all([
-        fetch(`${API_BASE}/value?user=${address}`),
+    // Parallel fetch for positions and USDC balance
+    // We need to fetch ALL positions to calculate accurate totals
+    // And fetch USDC balance directly from Polygon RPC
+    const [usdcBalance, firstBatchPositions] = await Promise.all([
+        fetchUsdcBalance(address),
         getPositionsBatch(address, 0)
     ]);
     
     let allPositions = [...firstBatchPositions];
     
     // If we got a full batch (limit 100), there might be more. Fetch remaining.
-    // To be safe and fast, we'll fetch a few more pages in parallel if needed, or just sequential.
-    // Given UI performance, let's fetch until we have all or a reasonable cap (e.g. 500).
     if (firstBatchPositions.length === 100) {
         let offset = 100;
         let more = true;
@@ -69,17 +67,9 @@ async function fetchPositions(address) {
         }
     }
     
-    let portfolioValue = 0;
-    if (portfolioResp.ok) {
-        // Response format: [{"user":"0x...","value":129.98}]
-        const portfolioData = await portfolioResp.json();
-        if (Array.isArray(portfolioData) && portfolioData.length > 0) {
-            portfolioValue = portfolioData[0].value || 0;
-        }
-    }
-    
     // 打印详细的数据结构信息用于调试
     console.log("All positions count:", allPositions.length);
+    console.log("USDC Balance:", usdcBalance);
     
     // 过滤未关闭的持仓
     // 根据API文档和常见逻辑判断持仓是否关闭
@@ -98,8 +88,55 @@ async function fetchPositions(address) {
     });
     
     console.log("Open positions:", openPositions);
-    renderPositions(openPositions, portfolioValue);
+    renderPositions(openPositions, usdcBalance);
     showLoading(false);
+}
+
+// Function to fetch USDC balance from Polygon RPC
+async function fetchUsdcBalance(address) {
+    const rpcUrl = "https://polygon-rpc.com";
+    const usdcContract = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+    // Function signature for balanceOf(address): 0x70a08231
+    // Pad address to 32 bytes (64 hex chars)
+    const paddedAddress = address.toLowerCase().replace("0x", "").padStart(64, "0");
+    const data = "0x70a08231" + paddedAddress;
+    
+    try {
+        const response = await fetch(rpcUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                jsonrpc: "2.0",
+                method: "eth_call",
+                params: [
+                    {
+                        to: usdcContract,
+                        data: data
+                    },
+                    "latest"
+                ],
+                id: 1
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`RPC returned ${response.status}`);
+        }
+        
+        const result = await response.json();
+        if (result.result) {
+            // Convert hex to decimal and divide by 10^6 (USDC decimals)
+            const hexBalance = result.result;
+            const balance = parseInt(hexBalance, 16);
+            return balance / 1000000;
+        }
+        return 0;
+    } catch (error) {
+        console.error("Failed to fetch USDC balance:", error);
+        return 0;
+    }
 }
 
 async function getPositionsBatch(address, offset) {
@@ -111,7 +148,7 @@ async function getPositionsBatch(address, offset) {
     return await response.json();
 }
 
-function renderPositions(positions, portfolioValue = 0) {
+function renderPositions(positions, cashBalance = 0) {
     const container = document.getElementById('positionsContainer');
     container.innerHTML = '';
     
@@ -133,15 +170,13 @@ function renderPositions(positions, portfolioValue = 0) {
         container.appendChild(el);
     });
     
-    // Calculate Cash
-    // Cash = Portfolio Value - Total Position Value
-    // Note: API Portfolio Value might be slightly different from our calculated Total Position Value due to price updates/rounding
-    // But it's the best proxy we have.
-    const cash = Math.max(0, portfolioValue - totalPositionValue);
+    // Calculate Portfolio Value
+    // Portfolio = Cash + Total Position Value
+    const portfolioValue = cashBalance + totalPositionValue;
     
     // Update Account Summary
     document.getElementById('val-portfolio').textContent = `$${portfolioValue.toFixed(2)}`;
-    document.getElementById('val-cash').textContent = `$${cash.toFixed(2)}`;
+    document.getElementById('val-cash').textContent = `$${cashBalance.toFixed(2)}`;
     document.getElementById('val-positions').textContent = `$${totalPositionValue.toFixed(2)}`;
     
     if (!positions || positions.length === 0) {
