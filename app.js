@@ -43,16 +43,31 @@ async function handleSearch() {
 
 async function fetchPositions(address) {
     // Parallel fetch for positions and portfolio value
-    const [positionsResp, portfolioResp] = await Promise.all([
-        fetch(`${API_BASE}/positions?user=${address}&limit=100`),
-        fetch(`${API_BASE}/value?user=${address}`)
+    // We need to fetch ALL positions to calculate accurate totals and cash balance
+    // Start with the portfolio value and the first batch of positions
+    const [portfolioResp, firstBatchPositions] = await Promise.all([
+        fetch(`${API_BASE}/value?user=${address}`),
+        getPositionsBatch(address, 0)
     ]);
     
-    if (!positionsResp.ok) {
-        throw new Error(`Positions API returned ${positionsResp.status}`);
-    }
+    let allPositions = [...firstBatchPositions];
     
-    const positions = await positionsResp.json();
+    // If we got a full batch (limit 100), there might be more. Fetch remaining.
+    // To be safe and fast, we'll fetch a few more pages in parallel if needed, or just sequential.
+    // Given UI performance, let's fetch until we have all or a reasonable cap (e.g. 500).
+    if (firstBatchPositions.length === 100) {
+        let offset = 100;
+        let more = true;
+        while (more && offset < 1000) { // Safety cap at 1000 positions
+            const batch = await getPositionsBatch(address, offset);
+            allPositions = [...allPositions, ...batch];
+            if (batch.length < 100) {
+                more = false;
+            } else {
+                offset += 100;
+            }
+        }
+    }
     
     let portfolioValue = 0;
     if (portfolioResp.ok) {
@@ -64,11 +79,11 @@ async function fetchPositions(address) {
     }
     
     // 打印详细的数据结构信息用于调试
-    console.log("Full positions data:", positions);
+    console.log("All positions count:", allPositions.length);
     
     // 过滤未关闭的持仓
     // 根据API文档和常见逻辑判断持仓是否关闭
-    const openPositions = positions.filter(position => {
+    const openPositions = allPositions.filter(position => {
         // 判断条件：
         // 1. 持仓数量大于0
         const size = parseFloat(position.size || 0);
@@ -85,6 +100,15 @@ async function fetchPositions(address) {
     console.log("Open positions:", openPositions);
     renderPositions(openPositions, portfolioValue);
     showLoading(false);
+}
+
+async function getPositionsBatch(address, offset) {
+    const url = `${API_BASE}/positions?user=${address}&limit=100&offset=${offset}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Positions API returned ${response.status}`);
+    }
+    return await response.json();
 }
 
 function renderPositions(positions, portfolioValue = 0) {
